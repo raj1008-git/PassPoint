@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "714063925635",
+    "project_id": "pass-point-9d316",
+    "storage_bucket": "pass-point-9d316.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714063925635:android:7f4652def4c890d21be6b6",
+        "android_client_info": {
+          "package_name": "com.nexora_ai.pass_point"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFJszCFzTM3sLEUDT2TD4Wg0p1pRyeq6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
