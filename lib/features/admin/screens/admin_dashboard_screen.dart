@@ -13,24 +13,30 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   String _query = '';
-  bool _onlyPending = false;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   Stream<QuerySnapshot> _visitorStream() {
-    // Always return ordered snapshots from Firestore and perform
-    // pending/search filtering client-side to avoid needing composite indexes.
-    final coll = FirebaseFirestore.instance
+    return FirebaseFirestore.instance
         .collection('visitors')
-        .orderBy('checkInTime', descending: true);
-    return coll.snapshots();
+        .orderBy('checkInTime', descending: true)
+        .snapshots();
   }
 
   Future<void> _signOut() async {
@@ -50,9 +56,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Exported CSV to: $path')));
-      devLog('Export CSV saved', params: {'path': path});
     } catch (e) {
-      devLog('Export CSV failed', params: {'error': e.toString()});
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
@@ -70,13 +74,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Exported JSON to: $path')));
-      devLog('Export JSON saved', params: {'path': path});
     } catch (e) {
-      devLog('Export JSON failed', params: {'error': e.toString()});
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
+  }
+
+  List<QueryDocumentSnapshot> _filterDocs(
+    List<QueryDocumentSnapshot> docs,
+    String statusFilter,
+  ) {
+    final filtered = docs.where((d) {
+      final data = d.data() as Map<String, dynamic>;
+      final name = (data['name'] ?? '').toString().toLowerCase();
+      final phone = (data['phone'] ?? '').toString().toLowerCase();
+      final q = _query.toLowerCase();
+
+      if (_query.isNotEmpty && !(name.contains(q) || phone.contains(q)))
+        return false;
+
+      final status = (data['status'] ?? '').toString().toLowerCase();
+
+      if (statusFilter == 'pending' && status != 'pending') return false;
+      if (statusFilter == 'checked_in' && status != 'checked_in') return false;
+
+      return true;
+    }).toList();
+
+    return filtered;
   }
 
   @override
@@ -87,34 +113,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           IconButton(onPressed: _signOut, icon: const Icon(Icons.logout)),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Pending'),
+            Tab(text: 'Checked-In'),
+          ],
+        ),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Search by name or phone',
-                    ),
-                    onChanged: (v) => setState(() => _query = v),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  children: [
-                    const Text('Pending only'),
-                    Switch(
-                      value: _onlyPending,
-                      onChanged: (v) => setState(() => _onlyPending = v),
-                    ),
-                  ],
-                ),
-              ],
+            padding: const EdgeInsets.all(8),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search by name or phone',
+              ),
+              onChanged: (v) => setState(() => _query = v),
             ),
           ),
           Expanded(
@@ -122,73 +140,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               stream: _visitorStream(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  devLog(
-                    'Visitor stream error',
-                    params: {'error': snapshot.error},
-                  );
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final docs = snapshot.data!.docs;
-
-                // Client-side search & pending-only filter
-                final filtered = docs.where((d) {
-                  final data = d.data() as Map<String, dynamic>;
-
-                  // pending-only filter
-                  if (_onlyPending) {
-                    final status = (data['status'] ?? '')
-                        .toString()
-                        .toLowerCase();
-                    if (status != 'pending') return false;
-                  }
-
-                  // search query filter (name or phone)
-                  if (_query.trim().isEmpty) return true;
-                  final name = (data['name'] ?? '').toString().toLowerCase();
-                  final phone = (data['phone'] ?? '').toString().toLowerCase();
-                  final q = _query.toLowerCase();
-                  return name.contains(q) || phone.contains(q);
-                }).toList();
-
-                if (filtered.isEmpty) {
-                  return const Center(child: Text('No visitors'));
-                }
-
-                return Column(
+                return TabBarView(
+                  controller: _tabController,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () => _exportAllAsCsv(filtered),
-                            icon: const Icon(Icons.download),
-                            label: const Text('Export CSV'),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () => _exportAllAsJson(filtered),
-                            icon: const Icon(Icons.download_outlined),
-                            label: const Text('Export JSON'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final doc = filtered[index];
-                          return VisitorLogTile(document: doc);
-                        },
-                      ),
-                    ),
+                    _buildList(context, docs, 'all'),
+                    _buildList(context, docs, 'pending'),
+                    _buildList(context, docs, 'checked_in'),
                   ],
                 );
               },
@@ -196,6 +159,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    List<QueryDocumentSnapshot> docs,
+    String filter,
+  ) {
+    final filtered = filter == 'all' ? docs : _filterDocs(docs, filter);
+
+    if (filtered.isEmpty) {
+      return const Center(child: Text('No visitors'));
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _exportAllAsCsv(filtered),
+                icon: const Icon(Icons.download),
+                label: const Text('Export CSV'),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => _exportAllAsJson(filtered),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Export JSON'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: filtered.length,
+            itemBuilder: (context, index) {
+              final doc = filtered[index];
+              return VisitorLogTile(document: doc);
+            },
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,3 +1,4 @@
+// lib/features/admin/widgets/visitor_log_tile.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -56,6 +57,7 @@ class VisitorLogTile extends StatelessWidget {
           );
           if (confirm == true) {
             await _updateStatus(id, {'status': 'checked_in'});
+            devLog('Visitor status updated to checked_in', params: {'id': id});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Visitor checked in!')),
             );
@@ -94,6 +96,7 @@ class VisitorLogTile extends StatelessWidget {
               'status': 'checked_out',
               'checkOutTime': Timestamp.now(),
             });
+            devLog('Visitor status updated to checked_out', params: {'id': id});
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Visitor checked Out')),
             );
@@ -104,6 +107,131 @@ class VisitorLogTile extends StatelessWidget {
     return const Chip(
       label: Text('Completed', style: TextStyle(color: Colors.white)),
       backgroundColor: Colors.grey,
+    );
+  }
+
+  void _showDetailsDialog(BuildContext context, Map<String, dynamic> data) {
+    final id = (data['id'] as String?) ?? document.id;
+    final name = (data['name'] as String?) ?? 'Unknown';
+    final phone = (data['phone'] as String?) ?? 'N/A';
+    final dept = (data['departmentName'] as String?) ?? '—';
+    final toMeet = (data['toMeet'] as String?) ?? '';
+    final purpose = (data['purpose'] as String?) ?? '';
+    final status = (data['status'] as String?) ?? 'pending';
+    final photoUrl = (data['photoUrl'] as String?) ?? '';
+    final checkInTime = data['checkInTime'] as Timestamp?;
+    final checkOutTime = data['checkOutTime'] as Timestamp?;
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text(name),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (photoUrl.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      photoUrl,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, st) => Container(
+                        height: 160,
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(Icons.person, size: 64),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                _detailRow('Phone', phone),
+                _detailRow('Department', dept),
+                _detailRow('To Meet', toMeet),
+                _detailRow('Purpose', purpose),
+                _detailRow('Status', status),
+                _detailRow('Check-In', _fmt(checkInTime)),
+                _detailRow('Check-Out', _fmt(checkOutTime)),
+              ],
+            ),
+          ),
+          actions: [
+            if (status == 'pending')
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop(); // close dialog first
+                  try {
+                    await _updateStatus(id, {'status': 'checked_in'});
+                    devLog('Checked in from dialog', params: {'id': id});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Visitor checked in')),
+                    );
+                  } catch (e) {
+                    devLog(
+                      'Error checking in from dialog',
+                      params: {'error': e.toString(), 'id': id},
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to check in: $e')),
+                    );
+                  }
+                },
+                child: const Text('Check In'),
+              ),
+            if (status == 'checked_in')
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop(); // close dialog first
+                  try {
+                    await _updateStatus(id, {
+                      'status': 'checked_out',
+                      'checkOutTime': Timestamp.now(),
+                    });
+                    devLog('Checked out from dialog', params: {'id': id});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Visitor checked out')),
+                    );
+                  } catch (e) {
+                    devLog(
+                      'Error checking out from dialog',
+                      params: {'error': e.toString(), 'id': id},
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to check out: $e')),
+                    );
+                  }
+                },
+                child: const Text('Check Out'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
     );
   }
 
@@ -120,7 +248,6 @@ class VisitorLogTile extends StatelessWidget {
     final checkOutTime = data['checkOutTime'] as Timestamp?;
     final photoUrl = data['photoUrl'] ?? '';
 
-    // NEW: department display (falls back to '—' if missing)
     final deptName = data['departmentName'] ?? '—';
 
     Color tileColor = switch (status) {
@@ -134,6 +261,10 @@ class VisitorLogTile extends StatelessWidget {
       elevation: 2,
       color: tileColor,
       child: ListTile(
+        onTap: () {
+          devLog('Tile tapped, opening details', params: {'id': id});
+          _showDetailsDialog(context, data);
+        },
         leading: Container(
           width: 56,
           height: 56,
@@ -164,7 +295,6 @@ class VisitorLogTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Department line
             Text(
               'Department: $deptName',
               style: TextStyle(color: Colors.grey.shade700),
