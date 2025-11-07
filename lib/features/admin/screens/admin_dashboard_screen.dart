@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../export/utils/file_writer.dart';
+import '../widgets/stat_card.dart';
 import '../widgets/visitor_log_tile.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -22,7 +24,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -40,9 +42,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    devLog('Admin signed out');
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseAuth.instance.signOut();
+      devLog('Admin signed out');
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    }
   }
 
   Future<void> _exportAllAsCsv(List<QueryDocumentSnapshot> docs) async {
@@ -53,13 +78,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         filename:
             'visitors_export_${DateTime.now().millisecondsSinceEpoch}.csv',
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Exported CSV to: $path')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported CSV to: $path'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -71,13 +106,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         filename:
             'visitors_export_${DateTime.now().millisecondsSinceEpoch}.json',
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Exported JSON to: $path')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported JSON to: $path'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -94,7 +139,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       final toMeet = (data['toMeet'] ?? '').toString().toLowerCase();
       final status = (data['status'] ?? '').toString().toLowerCase();
 
-      // If query present, require match in name/phone/department/toMeet
       if (q.isNotEmpty) {
         final matchesQuery =
             name.contains(q) ||
@@ -104,9 +148,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         if (!matchesQuery) return false;
       }
 
-      // Status filter logic
       if (statusFilter == 'pending' && status != 'pending') return false;
       if (statusFilter == 'checked_in' && status != 'checked_in') return false;
+      if (statusFilter == 'checked_out' && status != 'checked_out')
+        return false;
 
       return true;
     }).toList();
@@ -114,59 +159,438 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return filtered;
   }
 
+  Map<String, int> _calculateStats(List<QueryDocumentSnapshot> docs) {
+    int pending = 0;
+    int checkedIn = 0;
+    int checkedOut = 0;
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final status = (data['status'] ?? '').toString().toLowerCase();
+      if (status == 'pending') pending++;
+      if (status == 'checked_in') checkedIn++;
+      if (status == 'checked_out') checkedOut++;
+    }
+
+    return {
+      'pending': pending,
+      'checked_in': checkedIn,
+      'checked_out': checkedOut,
+      'total': docs.length,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reception Dashboard'),
-        actions: [
-          IconButton(onPressed: _signOut, icon: const Icon(Icons.logout)),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Pending'),
-            Tab(text: 'Checked-In'),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search by name, phone, department or person',
-              ),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _visitorStream(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final docs = snapshot.data!.docs;
-                return TabBarView(
-                  controller: _tabController,
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _visitorStream(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildList(context, docs, 'all'),
-                    _buildList(context, docs, 'pending'),
-                    _buildList(context, docs, 'checked_in'),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppTheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Error: ${snapshot.error}', style: AppTheme.bodyLarge),
+                  ],
+                ),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final docs = snapshot.data!.docs;
+            final stats = _calculateStats(docs);
+
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isTablet = constraints.maxWidth > 600;
+
+                return CustomScrollView(
+                  slivers: [
+                    // App Bar
+                    SliverToBoxAdapter(
+                      child: Container(
+                        color: AppTheme.white,
+                        padding: EdgeInsets.all(isTablet ? 24 : 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryRed,
+                                    borderRadius: AppTheme.radiusSmall,
+                                  ),
+                                  child: const Icon(
+                                    Icons.business,
+                                    color: AppTheme.white,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Admin Dashboard',
+                                        style: AppTheme.h2,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Manage visitor check-ins and check-outs',
+                                        style: AppTheme.bodySmall.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Export Button
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(16),
+                                        ),
+                                      ),
+                                      builder: (context) {
+                                        return Container(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Text(
+                                                'Export Visitor Log',
+                                                style: AppTheme.h3,
+                                              ),
+                                              const SizedBox(height: 20),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.table_chart,
+                                                  color: AppTheme.success,
+                                                ),
+                                                title: const Text(
+                                                  'Export as CSV',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  _exportAllAsCsv(docs);
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.code,
+                                                  color: AppTheme.info,
+                                                ),
+                                                title: const Text(
+                                                  'Export as JSON',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  _exportAllAsJson(docs);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                  icon: const Icon(Icons.download, size: 20),
+                                  label: const Text('Export Log'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.dark,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Logout Button
+                                OutlinedButton.icon(
+                                  onPressed: _signOut,
+                                  icon: const Icon(Icons.logout, size: 20),
+                                  label: const Text('Logout'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.error,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Stats Cards
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(isTablet ? 24 : 20),
+                        child: isTablet
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                    child: StatCard(
+                                      icon: Icons.schedule,
+                                      title: 'Pending Approval',
+                                      subtitle: 'Awaiting check-in',
+                                      count: stats['pending']!,
+                                      backgroundColor: AppTheme.pendingOrange,
+                                      iconColor: AppTheme.pendingOrangeIcon,
+                                      borderColor: AppTheme.pendingOrangeBorder,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: StatCard(
+                                      icon: Icons.how_to_reg,
+                                      title: 'Checked In',
+                                      subtitle: 'Currently on premises',
+                                      count: stats['checked_in']!,
+                                      backgroundColor: AppTheme.checkedInGreen,
+                                      iconColor: AppTheme.checkedInGreenIcon,
+                                      borderColor:
+                                          AppTheme.checkedInGreenBorder,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: StatCard(
+                                      icon: Icons.exit_to_app,
+                                      title: 'Checked Out',
+                                      subtitle: 'Visit completed',
+                                      count: stats['checked_out']!,
+                                      backgroundColor: AppTheme.checkedOutBlue,
+                                      iconColor: AppTheme.checkedOutBlueIcon,
+                                      borderColor:
+                                          AppTheme.checkedOutBlueBorder,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: StatCard(
+                                      icon: Icons.trending_up,
+                                      title: 'Total Visitors',
+                                      subtitle: 'All time',
+                                      count: stats['total']!,
+                                      backgroundColor: AppTheme.totalPurple,
+                                      iconColor: AppTheme.totalPurpleIcon,
+                                      borderColor: AppTheme.totalPurpleBorder,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: StatCard(
+                                          icon: Icons.schedule,
+                                          title: 'Pending Approval',
+                                          subtitle: 'Awaiting check-in',
+                                          count: stats['pending']!,
+                                          backgroundColor:
+                                              AppTheme.pendingOrange,
+                                          iconColor: AppTheme.pendingOrangeIcon,
+                                          borderColor:
+                                              AppTheme.pendingOrangeBorder,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: StatCard(
+                                          icon: Icons.how_to_reg,
+                                          title: 'Checked In',
+                                          subtitle: 'Currently on premises',
+                                          count: stats['checked_in']!,
+                                          backgroundColor:
+                                              AppTheme.checkedInGreen,
+                                          iconColor:
+                                              AppTheme.checkedInGreenIcon,
+                                          borderColor:
+                                              AppTheme.checkedInGreenBorder,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: StatCard(
+                                          icon: Icons.exit_to_app,
+                                          title: 'Checked Out',
+                                          subtitle: 'Visit completed',
+                                          count: stats['checked_out']!,
+                                          backgroundColor:
+                                              AppTheme.checkedOutBlue,
+                                          iconColor:
+                                              AppTheme.checkedOutBlueIcon,
+                                          borderColor:
+                                              AppTheme.checkedOutBlueBorder,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: StatCard(
+                                          icon: Icons.trending_up,
+                                          title: 'Total Visitors',
+                                          subtitle: 'All time',
+                                          count: stats['total']!,
+                                          backgroundColor: AppTheme.totalPurple,
+                                          iconColor: AppTheme.totalPurpleIcon,
+                                          borderColor:
+                                              AppTheme.totalPurpleBorder,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+
+                    // Search Bar
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 24 : 20,
+                        ),
+                        child: TextField(
+                          controller: _searchCtrl,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Search by name, email, department, or person to meet...',
+                            hintStyle: TextStyle(
+                              color: AppTheme.grey.withOpacity(0.5),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppTheme.grey,
+                            ),
+                            suffixIcon: _query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchCtrl.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: AppTheme.white,
+                            border: OutlineInputBorder(
+                              borderRadius: AppTheme.radiusMedium,
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          onChanged: (v) => setState(() => _query = v),
+                        ),
+                      ),
+                    ),
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+                    // Tabs and List
+                    SliverFillRemaining(
+                      child: Container(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 24 : 20,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.white,
+                          borderRadius: AppTheme.radiusLarge,
+                          boxShadow: AppTheme.cardShadow,
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppTheme.greyLight,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: TabBar(
+                                controller: _tabController,
+                                isScrollable: false,
+                                labelColor: AppTheme.dark,
+                                unselectedLabelColor: AppTheme.grey,
+                                labelStyle: AppTheme.labelLarge,
+                                indicatorColor: AppTheme.primaryRed,
+                                indicatorWeight: 3,
+                                tabs: [
+                                  Tab(text: 'Pending (${stats['pending']})'),
+                                  Tab(
+                                    text: 'Checked In (${stats['checked_in']})',
+                                  ),
+                                  Tab(
+                                    text:
+                                        'Checked Out (${stats['checked_out']})',
+                                  ),
+                                  Tab(text: 'All (${stats['total']})'),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildList(context, docs, 'pending'),
+                                  _buildList(context, docs, 'checked_in'),
+                                  _buildList(context, docs, 'checked_out'),
+                                  _buildList(context, docs, 'all'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   ],
                 );
               },
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -176,43 +600,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     List<QueryDocumentSnapshot> docs,
     String filter,
   ) {
-    // Always apply the same filter function so search works in all tabs
     final filtered = _filterDocs(docs, filter);
 
     if (filtered.isEmpty) {
-      return const Center(child: Text('No visitors'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 64,
+              color: AppTheme.grey.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            const Text('No visitors found', style: AppTheme.h3),
+            const SizedBox(height: 8),
+            Text(
+              'Visitors will appear here once they check in',
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      );
     }
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => _exportAllAsCsv(filtered),
-                icon: const Icon(Icons.download),
-                label: const Text('Export CSV'),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => _exportAllAsJson(filtered),
-                icon: const Icon(Icons.download_outlined),
-                label: const Text('Export JSON'),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: filtered.length,
-            itemBuilder: (context, index) {
-              final doc = filtered[index];
-              return VisitorLogTile(document: doc);
-            },
-          ),
-        ),
-      ],
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: filtered.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final doc = filtered[index];
+        return VisitorLogTile(document: doc);
+      },
     );
   }
 }

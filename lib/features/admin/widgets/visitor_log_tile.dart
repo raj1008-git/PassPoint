@@ -1,18 +1,19 @@
-// lib/features/admin/widgets/visitor_log_tile.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 
 class VisitorLogTile extends StatelessWidget {
   final QueryDocumentSnapshot document;
-  VisitorLogTile({super.key, required this.document});
+
+  const VisitorLogTile({super.key, required this.document});
 
   String _fmt(Timestamp? ts) {
     if (ts == null) return '-';
     final dt = ts.toDate();
-    return DateFormat('yyyy-MM-dd HH:mm').format(dt);
+    return DateFormat('MM/dd/yyyy hh:mm a').format(dt);
   }
 
   Future<void> _updateStatus(String id, Map<String, dynamic> updates) async {
@@ -23,97 +24,11 @@ class VisitorLogTile extends StatelessWidget {
         .update(updates);
   }
 
-  Widget _buildActionButton(
-    BuildContext context,
-    String status,
-    String id,
-    String name,
-  ) {
-    if (status == 'pending') {
-      return ElevatedButton.icon(
-        label: const Text('Verify/ Check In'),
-        icon: const Icon(Icons.check, size: 18),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green.shade600,
-          foregroundColor: Colors.white,
-        ),
-        onPressed: () async {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Confirm Check-In'),
-              content: Text('Mark "$name" as Checked In?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            ),
-          );
-          if (confirm == true) {
-            await _updateStatus(id, {'status': 'checked_in'});
-            devLog('Visitor status updated to checked_in', params: {'id': id});
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Visitor checked in!')),
-            );
-          }
-        },
-      );
-    }
-    if (status == 'checked_in') {
-      return ElevatedButton.icon(
-        icon: const Icon(Icons.time_to_leave, size: 18),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade600,
-          foregroundColor: Colors.white,
-        ),
-        label: const Text('Check Out'),
-        onPressed: () async {
-          final confirm = await showDialog<bool>(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text('Confirm Check-Out'),
-              content: Text('Checkout "$name" now?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            ),
-          );
-          if (confirm == true) {
-            await _updateStatus(id, {
-              'status': 'checked_out',
-              'checkOutTime': Timestamp.now(),
-            });
-            devLog('Visitor status updated to checked_out', params: {'id': id});
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Visitor checked Out')),
-            );
-          }
-        },
-      );
-    }
-    return const Chip(
-      label: Text('Completed', style: TextStyle(color: Colors.white)),
-      backgroundColor: Colors.grey,
-    );
-  }
-
   void _showDetailsDialog(BuildContext context, Map<String, dynamic> data) {
     final id = (data['id'] as String?) ?? document.id;
     final name = (data['name'] as String?) ?? 'Unknown';
     final phone = (data['phone'] as String?) ?? 'N/A';
+    final email = (data['email'] as String?) ?? 'N/A';
     final dept = (data['departmentName'] as String?) ?? '—';
     final toMeet = (data['toMeet'] as String?) ?? '';
     final purpose = (data['purpose'] as String?) ?? '';
@@ -124,114 +39,446 @@ class VisitorLogTile extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(name),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (photoUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      photoUrl,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, st) => Container(
-                        height: 160,
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: Icon(Icons.person, size: 64),
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: AppTheme.radiusLarge),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 600;
+
+                return SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppTheme.white,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              icon: const Icon(Icons.arrow_back, size: 20),
+                              label: const Text('Back to Dashboard'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppTheme.dark,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+
+                      // Content
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: isWide
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Left: Photo and Actions
+                                  SizedBox(
+                                    width: 280,
+                                    child: Column(
+                                      children: [
+                                        _buildPhotoSection(
+                                          photoUrl,
+                                          status,
+                                          dialogContext,
+                                          id,
+                                          name,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 32),
+                                  // Right: Details
+                                  Expanded(
+                                    child: _buildDetailsSection(
+                                      name,
+                                      phone,
+                                      email,
+                                      dept,
+                                      toMeet,
+                                      purpose,
+                                      checkInTime,
+                                      checkOutTime,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  _buildPhotoSection(
+                                    photoUrl,
+                                    status,
+                                    dialogContext,
+                                    id,
+                                    name,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildDetailsSection(
+                                    name,
+                                    phone,
+                                    email,
+                                    dept,
+                                    toMeet,
+                                    purpose,
+                                    checkInTime,
+                                    checkOutTime,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 12),
-                _detailRow('Phone', phone),
-                _detailRow('Department', dept),
-                _detailRow('To Meet', toMeet),
-                _detailRow('Purpose', purpose),
-                _detailRow('Status', status),
-                _detailRow('Check-In', _fmt(checkInTime)),
-                _detailRow('Check-Out', _fmt(checkOutTime)),
-              ],
+                );
+              },
             ),
           ),
-          actions: [
-            if (status == 'pending')
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop(); // close dialog first
-                  try {
-                    await _updateStatus(id, {'status': 'checked_in'});
-                    devLog('Checked in from dialog', params: {'id': id});
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Visitor checked in')),
-                    );
-                  } catch (e) {
-                    devLog(
-                      'Error checking in from dialog',
-                      params: {'error': e.toString(), 'id': id},
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to check in: $e')),
-                    );
-                  }
-                },
-                child: const Text('Check In'),
-              ),
-            if (status == 'checked_in')
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop(); // close dialog first
-                  try {
-                    await _updateStatus(id, {
-                      'status': 'checked_out',
-                      'checkOutTime': Timestamp.now(),
-                    });
-                    devLog('Checked out from dialog', params: {'id': id});
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Visitor checked out')),
-                    );
-                  } catch (e) {
-                    devLog(
-                      'Error checking out from dialog',
-                      params: {'error': e.toString(), 'id': id},
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to check out: $e')),
-                    );
-                  }
-                },
-                child: const Text('Check Out'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
         );
       },
     );
   }
 
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+  Widget _buildPhotoSection(
+    String photoUrl,
+    String status,
+    BuildContext dialogContext,
+    String id,
+    String name,
+  ) {
+    return Column(
+      children: [
+        // Photo
+        Container(
+          width: double.infinity,
+          height: 280,
+          decoration: BoxDecoration(
+            color: AppTheme.greyLight,
+            borderRadius: AppTheme.radiusMedium,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: photoUrl.isNotEmpty
+              ? Image.network(
+                  photoUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, st) => const Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 80,
+                      color: AppTheme.grey,
+                    ),
+                  ),
+                )
+              : const Center(
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 80,
+                    color: AppTheme.grey,
+                  ),
+                ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Status Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: status == 'pending'
+                ? AppTheme.pendingOrange
+                : status == 'checked_in'
+                ? AppTheme.checkedInGreen
+                : AppTheme.checkedOutBlue,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            status == 'pending'
+                ? 'Pending Approval'
+                : status == 'checked_in'
+                ? 'Checked In'
+                : 'Checked Out',
+            style: AppTheme.labelLarge.copyWith(
+              color: status == 'pending'
+                  ? AppTheme.pendingOrangeIcon
+                  : status == 'checked_in'
+                  ? AppTheme.checkedInGreenIcon
+                  : AppTheme.checkedOutBlueIcon,
             ),
           ),
-          Expanded(child: Text(value)),
-        ],
-      ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Action Buttons
+        if (status == 'pending')
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _updateStatus(id, {'status': 'checked_in'});
+                devLog('Checked in from dialog', params: {'id': id});
+              },
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Approve & Check In'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.success,
+                foregroundColor: AppTheme.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+              ),
+            ),
+          ),
+        if (status == 'checked_in')
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _updateStatus(id, {
+                  'status': 'checked_out',
+                  'checkOutTime': Timestamp.now(),
+                });
+                devLog('Checked out from dialog', params: {'id': id});
+              },
+              icon: const Icon(Icons.exit_to_app),
+              label: const Text('Check Out'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.error,
+                foregroundColor: AppTheme.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection(
+    String name,
+    String phone,
+    String email,
+    String dept,
+    String toMeet,
+    String purpose,
+    Timestamp? checkInTime,
+    Timestamp? checkOutTime,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Visitor Details', style: AppTheme.h3),
+        const SizedBox(height: 24),
+
+        // Personal Information
+        _buildSectionHeader(Icons.person, 'Personal Information'),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.greyLight.withOpacity(0.5),
+            borderRadius: AppTheme.radiusMedium,
+          ),
+          child: Column(
+            children: [
+              _buildInfoRow('Full Name', name),
+              const Divider(height: 24),
+              _buildInfoRow('Phone Number', phone),
+              const Divider(height: 24),
+              _buildInfoRow('Email Address', email),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Visit Information
+        _buildSectionHeader(Icons.business, 'Visit Information'),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.greyLight.withOpacity(0.5),
+            borderRadius: AppTheme.radiusMedium,
+          ),
+          child: Column(
+            children: [
+              _buildInfoRow('Department', dept),
+              const Divider(height: 24),
+              _buildInfoRow('Person to Meet', toMeet),
+              const Divider(height: 24),
+              _buildInfoRow('Purpose of Visit', purpose),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Timeline
+        _buildSectionHeader(Icons.schedule, 'Timeline'),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.greyLight.withOpacity(0.5),
+            borderRadius: AppTheme.radiusMedium,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.grey,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Request Submitted',
+                          style: AppTheme.labelMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(_fmt(checkInTime), style: AppTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (checkOutTime != null) ...[
+                Container(
+                  margin: const EdgeInsets.only(left: 4),
+                  width: 1,
+                  height: 24,
+                  color: AppTheme.greyLight,
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Checked Out',
+                            style: AppTheme.labelMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(_fmt(checkOutTime), style: AppTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Contact Department Box
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.error.withOpacity(0.05),
+            borderRadius: AppTheme.radiusMedium,
+            border: Border.all(color: AppTheme.error.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.phone, color: AppTheme.error, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Contact Department',
+                      style: AppTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Before checking in the visitor, contact $toMeet in the $dept department',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.primaryRed),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: AppTheme.labelLarge.copyWith(
+            fontSize: 16,
+            color: AppTheme.primaryRed,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: AppTheme.bodyMedium.copyWith(
+              color: AppTheme.dark,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -242,77 +489,191 @@ class VisitorLogTile extends StatelessWidget {
     final name = data['name'] as String? ?? 'Unknown';
     final phone = data['phone'] ?? 'N/A';
     final toMeet = data['toMeet'] ?? 'Staff';
-    final purpose = data['purpose'] ?? 'Unspecified';
     final status = data['status'] ?? 'pending';
     final checkInTime = data['checkInTime'] as Timestamp?;
-    final checkOutTime = data['checkOutTime'] as Timestamp?;
     final photoUrl = data['photoUrl'] ?? '';
-
     final deptName = data['departmentName'] ?? '—';
 
-    Color tileColor = switch (status) {
-      'pending' => Colors.orange.shade50,
-      'checked_in' => Colors.green.shade50,
-      _ => Colors.grey.shade50,
-    };
+    return InkWell(
+      onTap: () {
+        devLog('Tile tapped, opening details', params: {'id': id});
+        _showDetailsDialog(context, data);
+      },
+      borderRadius: AppTheme.radiusMedium,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: AppTheme.radiusMedium,
+          border: Border.all(color: AppTheme.greyLight, width: 1),
+        ),
+        child: Row(
+          children: [
+            // Photo
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppTheme.greyLight,
+                borderRadius: AppTheme.radiusSmall,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: photoUrl.isNotEmpty
+                  ? Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                            child: Icon(
+                              Icons.person_outline,
+                              size: 32,
+                              color: AppTheme.grey,
+                            ),
+                          ),
+                    )
+                  : const Center(
+                      child: Icon(
+                        Icons.person_outline,
+                        size: 32,
+                        color: AppTheme.grey,
+                      ),
+                    ),
+            ),
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      elevation: 2,
-      color: tileColor,
-      child: ListTile(
-        onTap: () {
-          devLog('Tile tapped, opening details', params: {'id': id});
-          _showDetailsDialog(context, data);
-        },
-        leading: Container(
-          width: 56,
-          height: 56,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: photoUrl.isNotEmpty
-              ? Image.network(
-                  photoUrl,
-                  width: 56,
-                  height: 56,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Icon(Icons.person, size: 30, color: Colors.blueGrey),
+            const SizedBox(width: 16),
+
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: AppTheme.labelLarge.copyWith(fontSize: 16),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: status == 'pending'
+                              ? AppTheme.warning.withOpacity(0.15)
+                              : status == 'checked_in'
+                              ? AppTheme.success.withOpacity(0.15)
+                              : AppTheme.grey.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          status == 'pending'
+                              ? 'Pending'
+                              : status == 'checked_in'
+                              ? 'Checked In'
+                              : 'Checked Out',
+                          style: AppTheme.bodySmall.copyWith(
+                            color: status == 'pending'
+                                ? AppTheme.warning
+                                : status == 'checked_in'
+                                ? AppTheme.success
+                                : AppTheme.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                )
-              : const Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 30,
-                    color: Colors.blueGrey,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Department: $deptName',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Meeting: $toMeet',
+                          style: AppTheme.bodySmall.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        'Phone: $phone',
+                        style: AppTheme.bodySmall.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // Time and Action
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _fmt(checkInTime).split(' ')[0],
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppTheme.textTertiary,
                   ),
                 ),
-        ),
-        title: Text(
-          '$name • $phone',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Department: $deptName',
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'To: $toMeet (${purpose})',
-              style: TextStyle(color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'IN: ${_fmt(checkInTime)} | OUT: ${_fmt(checkOutTime)}',
-              style: const TextStyle(fontSize: 12),
+                Text(
+                  _fmt(checkInTime).split(' ').skip(1).join(' '),
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppTheme.textTertiary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (status == 'pending')
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _updateStatus(id, {'status': 'checked_in'});
+                      devLog('Visitor checked in', params: {'id': id});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: AppTheme.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check, size: 16),
+                        const SizedBox(width: 4),
+                        const Text('Check In', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
-        isThreeLine: true,
-        trailing: _buildActionButton(context, status, id, name),
       ),
     );
   }
