@@ -85,17 +85,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     List<QueryDocumentSnapshot> docs,
     String statusFilter,
   ) {
+    final q = _query.trim().toLowerCase();
     final filtered = docs.where((d) {
       final data = d.data() as Map<String, dynamic>;
       final name = (data['name'] ?? '').toString().toLowerCase();
       final phone = (data['phone'] ?? '').toString().toLowerCase();
-      final q = _query.toLowerCase();
-
-      if (_query.isNotEmpty && !(name.contains(q) || phone.contains(q)))
-        return false;
-
+      final dept = (data['departmentName'] ?? '').toString().toLowerCase();
+      final toMeet = (data['toMeet'] ?? '').toString().toLowerCase();
       final status = (data['status'] ?? '').toString().toLowerCase();
 
+      // If query present, require match in name/phone/department/toMeet
+      if (q.isNotEmpty) {
+        final matchesQuery =
+            name.contains(q) ||
+            phone.contains(q) ||
+            dept.contains(q) ||
+            toMeet.contains(q);
+        if (!matchesQuery) return false;
+      }
+
+      // Status filter logic
       if (statusFilter == 'pending' && status != 'pending') return false;
       if (statusFilter == 'checked_in' && status != 'checked_in') return false;
 
@@ -130,7 +139,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               controller: _searchCtrl,
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
-                hintText: 'Search by name or phone',
+                hintText: 'Search by name, phone, department or person',
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -167,7 +176,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     List<QueryDocumentSnapshot> docs,
     String filter,
   ) {
-    final filtered = filter == 'all' ? docs : _filterDocs(docs, filter);
+    // Always apply the same filter function so search works in all tabs
+    final filtered = _filterDocs(docs, filter);
 
     if (filtered.isEmpty) {
       return const Center(child: Text('No visitors'));
