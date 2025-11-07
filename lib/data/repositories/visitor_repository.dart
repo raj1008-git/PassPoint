@@ -24,10 +24,18 @@ class VisitorRepository {
     required String toMeet,
     required String purpose,
     required File photoFile,
+    // NEW: optional department fields
+    String? departmentId,
+    String? departmentName,
   }) async {
     devLog(
       'Visitor Repository.createVisitor Called',
-      params: {'name': name, 'phone': phone},
+      params: {
+        'name': name,
+        'phone': phone,
+        'departmentId': departmentId,
+        'departmentName': departmentName,
+      },
     );
     try {
       final photoUrl = await _cloudinary.uploadImage(photoFile);
@@ -43,6 +51,8 @@ class VisitorRepository {
         photoUrl: photoUrl,
         checkInTime: Timestamp.now(),
         status: 'pending',
+        departmentId: departmentId,
+        departmentName: departmentName,
       );
       await _firestore.collection('visitors').doc(id).set(visitor.toMap());
       devLog('Visitor Saved to Firestore', params: {'id': id});

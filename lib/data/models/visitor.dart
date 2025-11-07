@@ -11,6 +11,11 @@ class Visitor {
   final Timestamp checkInTime;
   final Timestamp? checkOutTime;
   final String status;
+
+  // NEW: optional department fields
+  final String? departmentId;
+  final String? departmentName;
+
   Visitor({
     required this.id,
     required this.name,
@@ -22,6 +27,8 @@ class Visitor {
     required this.checkInTime,
     this.checkOutTime,
     this.status = 'pending',
+    this.departmentId,
+    this.departmentName,
   });
 
   Map<String, dynamic> toMap() => {
@@ -35,6 +42,8 @@ class Visitor {
     'checkInTime': checkInTime,
     'checkOutTime': checkOutTime,
     'status': status,
+    'departmentId': departmentId,
+    'departmentName': departmentName,
   };
 
   factory Visitor.fromMap(Map<String, dynamic> map) {
@@ -53,6 +62,8 @@ class Visitor {
           ? map['checkOutTime'] as Timestamp?
           : null,
       status: map['status'] as String? ?? 'pending',
+      departmentId: map['departmentId'] as String?,
+      departmentName: map['departmentName'] as String?,
     );
   }
 }
