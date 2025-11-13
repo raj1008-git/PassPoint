@@ -285,137 +285,84 @@ class VisitorLogTile extends StatelessWidget {
 
         // Personal Information
         _buildSectionHeader(Icons.person, 'Personal Information'),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppTheme.greyLight.withOpacity(0.5),
-            borderRadius: AppTheme.radiusMedium,
-          ),
-          child: Column(
-            children: [
-              _buildInfoRow('Full Name', name),
-              const Divider(height: 24),
-              _buildInfoRow('Phone Number', phone),
-              const Divider(height: 24),
-              _buildInfoRow('Email Address', email),
-            ],
-          ),
-        ),
+        const SizedBox(height: 12),
+        _buildInfoCard([
+          _buildCleanInfoRow('Full Name', name),
+          _buildCleanInfoRow('Phone Number', phone),
+          _buildCleanInfoRow('Email Address', email),
+        ]),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Visit Information
         _buildSectionHeader(Icons.business, 'Visit Information'),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppTheme.greyLight.withOpacity(0.5),
-            borderRadius: AppTheme.radiusMedium,
-          ),
-          child: Column(
-            children: [
-              _buildInfoRow('Department', dept),
-              const Divider(height: 24),
-              _buildInfoRow('Person to Meet', toMeet),
-              const Divider(height: 24),
-              _buildInfoRow('Purpose of Visit', purpose),
-            ],
-          ),
-        ),
+        const SizedBox(height: 12),
+        _buildInfoCard([
+          _buildCleanInfoRow('Department', dept),
+          _buildCleanInfoRow('Person to Meet', toMeet),
+          _buildCleanInfoRow('Purpose of Visit', purpose),
+        ]),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Timeline
         _buildSectionHeader(Icons.schedule, 'Timeline'),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.greyLight.withOpacity(0.5),
-            borderRadius: AppTheme.radiusMedium,
+            color: AppTheme.white,
+            borderRadius: AppTheme.radiusSmall,
+            border: Border.all(color: AppTheme.greyLight, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.grey,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Request Submitted',
-                          style: AppTheme.labelMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(_fmt(checkInTime), style: AppTheme.bodySmall),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              _buildTimelineItem('Request Submitted', _fmt(checkInTime), true),
               if (checkOutTime != null) ...[
                 Container(
-                  margin: const EdgeInsets.only(left: 4),
-                  width: 1,
-                  height: 24,
-                  color: AppTheme.greyLight,
+                  margin: const EdgeInsets.only(left: 11, top: 8, bottom: 8),
+                  width: 2,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: AppTheme.greyLight,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.grey,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Checked Out',
-                            style: AppTheme.labelMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(_fmt(checkOutTime), style: AppTheme.bodySmall),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                _buildTimelineItem('Checked Out', _fmt(checkOutTime), true),
               ],
             ],
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Contact Department Box
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.error.withOpacity(0.05),
-            borderRadius: AppTheme.radiusMedium,
-            border: Border.all(color: AppTheme.error.withOpacity(0.2)),
+            color: AppTheme.primaryRed.withOpacity(0.05),
+            borderRadius: AppTheme.radiusSmall,
+            border: Border.all(
+              color: AppTheme.primaryRed.withOpacity(0.15),
+              width: 1,
+            ),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.phone, color: AppTheme.error, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.phone_outlined,
+                  color: AppTheme.primaryRed,
+                  size: 18,
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -433,6 +380,98 @@ class VisitorLogTile extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard(List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: AppTheme.radiusSmall,
+        border: Border.all(color: AppTheme.greyLight, width: 1),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildCleanInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.textTertiary),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.dark,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(String title, String time, bool isActive) {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppTheme.success.withOpacity(0.1)
+                : AppTheme.grey.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive ? AppTheme.success : AppTheme.grey,
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: isActive ? AppTheme.success : AppTheme.grey,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTheme.labelMedium.copyWith(
+                  color: AppTheme.dark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                time,
+                style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondary,
                 ),
               ),
             ],

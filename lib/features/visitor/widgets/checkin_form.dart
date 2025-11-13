@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pass_point/core/utils/dev.log.dart';
-import 'package:pass_point/features/visitor/widgets/camera_capture.dart';
+
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dev.log.dart';
+import 'camera_capture.dart';
 
 typedef OnSubmitCallback =
     Future<void> Function({
@@ -14,7 +16,6 @@ typedef OnSubmitCallback =
       required String toMeet,
       required String purpose,
       required File photoFile,
-      // NEW: optional department fields
       String? departmentId,
       String? departmentName,
     });
@@ -38,11 +39,8 @@ class _CheckInFormState extends State<CheckInForm> {
   File? _photoFile;
   bool _isSubmitting = false;
 
-  // department selection state
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
-
-  // Manual department controller (used when fallback shown)
   final _manualDeptCtrl = TextEditingController();
 
   @override
@@ -62,9 +60,7 @@ class _CheckInFormState extends State<CheckInForm> {
       context,
     ).push<File?>(MaterialPageRoute(builder: (_) => CameraCaptureScreen()));
     if (file != null) {
-      setState(() {
-        _photoFile = file;
-      });
+      setState(() => _photoFile = file);
       devLog('Photo returned from camera', params: {'path': file.path});
     } else {
       devLog('No Photo returned from camera');
@@ -74,16 +70,17 @@ class _CheckInFormState extends State<CheckInForm> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_photoFile == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please capture a photo')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please capture a photo'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
       return;
     }
-    setState(() {
-      _isSubmitting = true;
-    });
 
-    // If manual department was used, ensure departmentName is set
+    setState(() => _isSubmitting = true);
+
     if ((_selectedDepartmentName == null ||
             _selectedDepartmentName!.trim().isEmpty) &&
         (_manualDeptCtrl.text.trim().isNotEmpty)) {
@@ -105,17 +102,21 @@ class _CheckInFormState extends State<CheckInForm> {
       devLog('Form onSubmit completed successfully');
     } catch (e) {
       devLog('Form submission failed', params: {'error': e.toString()});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Submission failed: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Submission failed: ${e.toString()}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
-  /// Stream of departments from Firestore: collection 'departments'
   Stream<QuerySnapshot> _departmentsStream() {
     return FirebaseFirestore.instance
         .collection('departments')
@@ -125,231 +126,518 @@ class _CheckInFormState extends State<CheckInForm> {
 
   @override
   Widget build(BuildContext context) {
-    return AbsorbPointer(
-      absorbing: _isSubmitting,
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _nameCtrl,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(labelText: 'Full Name'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter name' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: (v) => (v == null || v.trim().length < 7)
-                  ? 'Enter valid phone number'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailCtrl,
-              textInputAction: TextInputAction.next,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email (optional)'),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return null;
-                final re = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                return re.hasMatch(v.trim()) ? null : 'Enter a valid Email';
-              },
-            ),
-            const SizedBox(height: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTablet = constraints.maxWidth > 600;
 
-            // Departments stream with fallback to manual entry.
-            StreamBuilder<QuerySnapshot>(
-              stream: _departmentsStream(),
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  devLog(
-                    'Departments stream error',
-                    params: {'error': snap.error},
-                  );
-                  // Fallback: manual entry
-                  return Column(
+        return AbsorbPointer(
+          absorbing: _isSubmitting,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(isTablet ? 32 : 20),
+              child: Center(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: isTablet ? 700 : double.infinity,
+                  ),
+                  padding: EdgeInsets.all(isTablet ? 32 : 24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.white,
+                    borderRadius: AppTheme.radiusLarge,
+                    boxShadow: AppTheme.cardShadow,
+                  ),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
-                        controller: _manualDeptCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Department (enter manually)',
+                      // Header
+                      Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryRed,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.person_outline,
+                                size: 32,
+                                color: AppTheme.white,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text('Visitor Check-In', style: AppTheme.h3),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Please fill out the form below',
+                              style: AppTheme.bodySmall.copyWith(
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                        validator: (v) {
-                          // If no selection and no manual entry -> error
-                          if ((_selectedDepartmentId == null ||
-                                  _selectedDepartmentId!.isEmpty) &&
-                              (v == null || v.trim().isEmpty))
-                            return 'Enter department';
-                          return null;
-                        },
-                        onChanged: (v) {
-                          _selectedDepartmentId = null;
-                          _selectedDepartmentName = v.trim().isEmpty
-                              ? null
-                              : v.trim();
-                        },
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tip: Add departments in Firestore under collection "departments" with a `name` field.',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+
+                      const SizedBox(height: 32),
+
+                      // Form Fields - Two Column Layout for Tablet
+                      if (isTablet) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _nameCtrl,
+                                label: 'Full Name',
+                                icon: Icons.person_outline,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Enter name'
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _phoneCtrl,
+                                label: 'Phone Number',
+                                icon: Icons.phone_outlined,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                validator: (v) =>
+                                    (v == null || v.trim().length < 7)
+                                    ? 'Enter valid phone number'
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _emailCtrl,
+                                label: 'Email Address',
+                                icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
+                                required: false,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty)
+                                    return null;
+                                  final re = RegExp(
+                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                  );
+                                  return re.hasMatch(v.trim())
+                                      ? null
+                                      : 'Enter a valid email';
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildDepartmentField()),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _toMeetCtrl,
+                                label: 'Person to Meet',
+                                icon: Icons.people_outline,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Enter who to meet'
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _purposeCtrl,
+                                label: 'Purpose of Visit',
+                                icon: Icons.description_outlined,
+                                maxLines: 1,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Enter purpose'
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        _buildTextField(
+                          controller: _nameCtrl,
+                          label: 'Full Name',
+                          icon: Icons.person_outline,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter name'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _phoneCtrl,
+                          label: 'Phone Number',
+                          icon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (v) => (v == null || v.trim().length < 7)
+                              ? 'Enter valid phone number'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _emailCtrl,
+                          label: 'Email Address',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          required: false,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            final re = RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            );
+                            return re.hasMatch(v.trim())
+                                ? null
+                                : 'Enter a valid email';
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDepartmentField(),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _toMeetCtrl,
+                          label: 'Person to Meet',
+                          icon: Icons.people_outline,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter who to meet'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _purposeCtrl,
+                          label: 'Purpose of Visit',
+                          icon: Icons.description_outlined,
+                          maxLines: 2,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter purpose'
+                              : null,
+                        ),
+                      ],
+
+                      const SizedBox(height: 24),
+
+                      // Photo Capture
+                      _buildPhotoCapture(),
+
+                      const SizedBox(height: 32),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isSubmitting ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryRed,
+                            foregroundColor: AppTheme.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppTheme.radiusMedium,
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: AppTheme.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Submit Check-In',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
-                  );
-                }
-
-                if (snap.connectionState == ConnectionState.waiting) {
-                  devLog('Departments stream waiting...');
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(),
-                  );
-                }
-
-                final docs = snap.data?.docs ?? [];
-                devLog(
-                  'Departments snapshot count',
-                  params: {'count': docs.length},
-                );
-
-                if (docs.isEmpty) {
-                  // No departments present — show manual entry fallback
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('No departments available.'),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _manualDeptCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Department (enter manually)',
-                        ),
-                        validator: (v) {
-                          if ((_selectedDepartmentId == null ||
-                                  _selectedDepartmentId!.isEmpty) &&
-                              (v == null || v.trim().isEmpty))
-                            return 'Enter department';
-                          return null;
-                        },
-                        onChanged: (v) {
-                          _selectedDepartmentId = null;
-                          _selectedDepartmentName = v.trim().isEmpty
-                              ? null
-                              : v.trim();
-                        },
-                      ),
-                    ],
-                  );
-                }
-
-                // Build dropdown from documents
-                final items = docs.map((d) {
-                  final data = d.data() as Map<String, dynamic>;
-                  return DropdownMenuItem<String>(
-                    value: d.id,
-                    child: Text((data['name'] ?? d.id).toString()),
-                  );
-                }).toList();
-
-                // If previously chosen deptId no longer exists, reset selection
-                if (_selectedDepartmentId != null &&
-                    !docs.any((d) => d.id == _selectedDepartmentId)) {
-                  _selectedDepartmentId = null;
-                  _selectedDepartmentName = null;
-                }
-
-                return DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Department'),
-                  items: items,
-                  value: _selectedDepartmentId,
-                  onChanged: (val) {
-                    final selDoc = docs.firstWhere((d) => d.id == val);
-                    final name =
-                        (selDoc.data() as Map<String, dynamic>)['name']
-                            ?.toString() ??
-                        val;
-                    setState(() {
-                      _selectedDepartmentId = val;
-                      _selectedDepartmentName = name;
-                      _manualDeptCtrl.text = '';
-                    });
-                    devLog(
-                      'Department selected',
-                      params: {'id': val, 'name': name},
-                    );
-                  },
-                  validator: (v) {
-                    // Accept either a dropdown selection or manual department name
-                    if ((_selectedDepartmentName != null) &&
-                        (_selectedDepartmentName!.trim().isNotEmpty))
-                      return null;
-                    if (v == null || v.isEmpty) return 'Select department';
-                    return null;
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _toMeetCtrl,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Person to meet (name)',
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter who to meet' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _purposeCtrl,
-              maxLines: 2,
-              decoration: const InputDecoration(labelText: 'Purpose of visit'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter purpose' : null,
-            ),
-            const SizedBox(height: 16),
-            // Photo Capture Row
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _openCamera,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Capture Photo'),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                if (_photoFile != null)
-                  Expanded(
-                    child: Text(
-                      'Photo ready: ${_photoFile!.path.split('/').last}', // Shows just the filename
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  )
-                else
-                  const Expanded(child: Text('No photo captured')),
-              ],
+              ),
             ),
-            const SizedBox(height: 20),
-            // Submission Button
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Submit Check-In'),
-            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+    bool required = true,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: AppTheme.primaryRed),
+            const SizedBox(width: 8),
+            Text(label, style: AppTheme.labelLarge),
+            if (required)
+              const Text(' *', style: TextStyle(color: AppTheme.error)),
           ],
         ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          maxLines: maxLines,
+          textInputAction: maxLines > 1
+              ? TextInputAction.newline
+              : TextInputAction.next,
+          decoration: InputDecoration(
+            hintText: 'Enter ${label.toLowerCase()}',
+            hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+            filled: true,
+            fillColor: AppTheme.greyLight.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: AppTheme.radiusSmall,
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDepartmentField() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _departmentsStream(),
+      builder: (context, snap) {
+        if (snap.hasError || snap.data?.docs.isEmpty == true) {
+          return _buildTextField(
+            controller: _manualDeptCtrl,
+            label: 'Department',
+            icon: Icons.business_outlined,
+            validator: (v) {
+              if ((_selectedDepartmentId == null ||
+                      _selectedDepartmentId!.isEmpty) &&
+                  (v == null || v.trim().isEmpty))
+                return 'Enter department';
+              return null;
+            },
+          );
+        }
+
+        if (snap.connectionState == ConnectionState.waiting) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.business_outlined,
+                    size: 18,
+                    color: AppTheme.primaryRed,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Department', style: AppTheme.labelLarge),
+                  const Text(' *', style: TextStyle(color: AppTheme.error)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.greyLight.withOpacity(0.5),
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        final docs = snap.data!.docs;
+        final items = docs.map((d) {
+          final data = d.data() as Map<String, dynamic>;
+          return DropdownMenuItem<String>(
+            value: d.id,
+            child: Text((data['name'] ?? d.id).toString()),
+          );
+        }).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.business_outlined,
+                  size: 18,
+                  color: AppTheme.primaryRed,
+                ),
+                const SizedBox(width: 8),
+                const Text('Department', style: AppTheme.labelLarge),
+                const Text(' *', style: TextStyle(color: AppTheme.error)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                hintText: 'Select department',
+                hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+                filled: true,
+                fillColor: AppTheme.greyLight.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              items: items,
+              value: _selectedDepartmentId,
+              onChanged: (val) {
+                final selDoc = docs.firstWhere((d) => d.id == val);
+                final name =
+                    (selDoc.data() as Map<String, dynamic>)['name']
+                        ?.toString() ??
+                    val;
+                setState(() {
+                  _selectedDepartmentId = val;
+                  _selectedDepartmentName = name;
+                });
+                devLog(
+                  'Department selected',
+                  params: {'id': val, 'name': name},
+                );
+              },
+              validator: (v) {
+                if ((_selectedDepartmentName != null) &&
+                    (_selectedDepartmentName!.trim().isNotEmpty))
+                  return null;
+                if (v == null || v.isEmpty) return 'Select department';
+                return null;
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPhotoCapture() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.greyLight.withOpacity(0.3),
+        borderRadius: AppTheme.radiusMedium,
+        border: Border.all(
+          color: _photoFile == null
+              ? AppTheme.greyLight
+              : AppTheme.success.withOpacity(0.3),
+          width: 2,
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: Column(
+        children: [
+          if (_photoFile != null) ...[
+            ClipRRect(
+              borderRadius: AppTheme.radiusSmall,
+              child: Image.file(
+                _photoFile!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: AppTheme.success,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Photo captured successfully',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(onPressed: _openCamera, child: const Text('Retake')),
+              ],
+            ),
+          ] else ...[
+            Icon(
+              Icons.camera_alt_outlined,
+              size: 48,
+              color: AppTheme.grey.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            const Text('Photo Required', style: AppTheme.labelLarge),
+            const SizedBox(height: 8),
+            Text(
+              'Please capture your photo for verification',
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _openCamera,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Capture Photo'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryRed,
+                  side: const BorderSide(color: AppTheme.primaryRed),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTheme.radiusSmall,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
