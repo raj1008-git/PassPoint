@@ -1,13 +1,60 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/pin_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../admin/screens/admin_dashboard_screen.dart';
+import '../../admin/widgets/pin_dialog.dart';
 import 'checkin_screen.dart';
 
 class VisitorWelcomeScreen extends StatelessWidget {
   const VisitorWelcomeScreen({Key? key}) : super(key: key);
+
+  Future<void> _handleAdminAccess(BuildContext context) async {
+    devLog('Admin button pressed');
+    final isLoggedIn = await AuthService.isLoggedIn();
+
+    if (!context.mounted) return;
+
+    // Always ask for PIN when accessing from welcome screen
+    final enteredPin = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PinDialog(),
+    );
+
+    if (enteredPin == null || enteredPin.isEmpty) {
+      devLog('PIN entry cancelled');
+      return;
+    }
+
+    // Verify PIN
+    final isValidPin = await PinService.verifyPin(enteredPin);
+
+    if (!context.mounted) return;
+
+    if (!isValidPin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Incorrect PIN code'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    // PIN is correct
+    if (isLoggedIn) {
+      // Already logged in, go directly to dashboard
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+    } else {
+      // Not logged in, go to login screen
+      Navigator.of(context).pushNamed('/admin-login');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +77,7 @@ class VisitorWelcomeScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Spacer(),
-
+                      SizedBox(height: isTablet ? 60 : 40),
                       // Logo and Brand
                       Container(
                         width: 100,
@@ -201,7 +247,7 @@ class VisitorWelcomeScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const Spacer(),
+                      SizedBox(height: isTablet ? 60 : 40),
 
                       // Footer
                       Padding(
@@ -217,27 +263,7 @@ class VisitorWelcomeScreen extends StatelessWidget {
                             const SizedBox(height: 16),
                             // Admin Access Button
                             TextButton.icon(
-                              onPressed: () async {
-                                devLog('Admin button pressed');
-                                final isLoggedIn =
-                                    await AuthService.isLoggedIn();
-                                if (!context.mounted) return;
-
-                                if (isLoggedIn) {
-                                  // Already logged in, go directly to dashboard
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const AdminDashboardScreen(),
-                                    ),
-                                  );
-                                } else {
-                                  // Not logged in, go to login screen
-                                  Navigator.of(
-                                    context,
-                                  ).pushNamed('/admin-login');
-                                }
-                              },
+                              onPressed: () => _handleAdminAccess(context),
                               icon: const Icon(Icons.shield_outlined, size: 18),
                               label: const Text('Admin Dashboard'),
                               style: TextButton.styleFrom(

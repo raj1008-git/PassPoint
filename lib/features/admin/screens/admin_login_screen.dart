@@ -271,13 +271,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Username: admin',
+                                      'Username: admin@gmail.com',
                                       style: AppTheme.bodySmall.copyWith(
                                         fontFamily: 'monospace',
                                       ),
                                     ),
                                     Text(
-                                      'Password: admin',
+                                      'Password: admin.login',
                                       style: AppTheme.bodySmall.copyWith(
                                         fontFamily: 'monospace',
                                       ),
