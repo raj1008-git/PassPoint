@@ -34,6 +34,7 @@ class VisitorLogTile extends StatelessWidget {
     final purpose = (data['purpose'] as String?) ?? '';
     final status = (data['status'] as String?) ?? 'pending';
     final photoUrl = (data['photoUrl'] as String?) ?? '';
+    final signatureUrl = (data['signatureUrl'] as String?) ?? '';
     final checkInTime = data['checkInTime'] as Timestamp?;
     final checkOutTime = data['checkOutTime'] as Timestamp?;
 
@@ -109,6 +110,7 @@ class VisitorLogTile extends StatelessWidget {
                                       purpose,
                                       checkInTime,
                                       checkOutTime,
+                                      signatureUrl,
                                     ),
                                   ),
                                 ],
@@ -132,6 +134,7 @@ class VisitorLogTile extends StatelessWidget {
                                     purpose,
                                     checkInTime,
                                     checkOutTime,
+                                    signatureUrl,
                                   ),
                                 ],
                               ),
@@ -276,6 +279,7 @@ class VisitorLogTile extends StatelessWidget {
     String purpose,
     Timestamp? checkInTime,
     Timestamp? checkOutTime,
+    String signatureUrl,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,6 +340,44 @@ class VisitorLogTile extends StatelessWidget {
         ),
 
         const SizedBox(height: 20),
+
+        // Signature Section
+        if (signatureUrl.isNotEmpty) ...[
+          _buildSectionHeader(Icons.draw, 'Signature'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.white,
+              borderRadius: AppTheme.radiusSmall,
+              border: Border.all(color: AppTheme.greyLight, width: 1),
+            ),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: AppTheme.radiusSmall,
+                  child: Container(
+                    color: AppTheme.white,
+                    padding: const EdgeInsets.all(8),
+                    child: Image.network(
+                      signatureUrl,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      errorBuilder: (c, e, st) => const Center(
+                        child: Text(
+                          'Signature unavailable',
+                          style: AppTheme.bodySmall,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
 
         // Contact Department Box
         Container(
@@ -491,30 +533,6 @@ class VisitorLogTile extends StatelessWidget {
           style: AppTheme.labelLarge.copyWith(
             fontSize: 16,
             color: AppTheme.primaryRed,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 140,
-          child: Text(
-            label,
-            style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: AppTheme.bodyMedium.copyWith(
-              color: AppTheme.dark,
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ),
       ],

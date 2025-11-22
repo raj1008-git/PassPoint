@@ -8,11 +8,11 @@ class Visitor {
   final String toMeet;
   final String purpose;
   final String photoUrl;
+  final String? signatureUrl;
   final Timestamp checkInTime;
   final Timestamp? checkOutTime;
   final String status;
 
-  // NEW: optional department fields
   final String? departmentId;
   final String? departmentName;
 
@@ -24,6 +24,7 @@ class Visitor {
     required this.toMeet,
     required this.purpose,
     required this.photoUrl,
+    this.signatureUrl,
     required this.checkInTime,
     this.checkOutTime,
     this.status = 'pending',
@@ -39,6 +40,7 @@ class Visitor {
     'toMeet': toMeet,
     'purpose': purpose,
     'photoUrl': photoUrl,
+    'signatureUrl': signatureUrl,
     'checkInTime': checkInTime,
     'checkOutTime': checkOutTime,
     'status': status,
@@ -55,6 +57,7 @@ class Visitor {
       toMeet: map['toMeet'] as String,
       purpose: map['purpose'] as String,
       photoUrl: map['photoUrl'] as String,
+      signatureUrl: map['signatureUrl'] as String?,
       checkInTime: map['checkInTime'] is Timestamp
           ? map['checkInTime'] as Timestamp
           : Timestamp.fromDate(DateTime.parse(map['checkInTime'] as String)),

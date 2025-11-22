@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pass_point/core/utils/dev.log.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import 'admin_dashboard_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -47,10 +47,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       );
       devLog('Admin signed in successfully', params: {'uid': cred.user?.uid});
 
+      await AuthService.setLoggedIn(true);
+
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-        );
+        Navigator.of(context).pushReplacementNamed('/home');
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -104,22 +104,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Back to Home Button
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back, size: 20),
-                          label: const Text('Back to Home'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppTheme.dark,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                        ),
-                      ),
-
                       const SizedBox(height: 40),
 
                       // Login Card

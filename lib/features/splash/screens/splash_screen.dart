@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dev.log.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -42,11 +44,24 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) {
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    final isLoggedIn = await AuthService.isLoggedIn();
+    devLog('Auth check complete', params: {'isLoggedIn': isLoggedIn});
+
+    if (mounted) {
+      if (isLoggedIn) {
         Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/admin-login');
       }
-    });
+    }
   }
 
   @override

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../export/utils/file_writer.dart';
@@ -62,10 +62,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
 
     if (confirm == true) {
-      await FirebaseAuth.instance.signOut();
+      await AuthService.signOut();
       devLog('Admin signed out');
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/admin-login', (route) => false);
       }
     }
   }

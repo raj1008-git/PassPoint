@@ -18,6 +18,7 @@ class CheckInScreen extends StatelessWidget {
     required String toMeet,
     required String purpose,
     required File photoFile,
+    File? signatureFile,
     String? departmentId,
     String? departmentName,
   }) async {
@@ -36,6 +37,7 @@ class CheckInScreen extends StatelessWidget {
         toMeet: toMeet,
         purpose: purpose,
         photoFile: photoFile,
+        signatureFile: signatureFile,
         departmentId: departmentId,
         departmentName: departmentName,
       );
@@ -234,6 +236,7 @@ class CheckInScreen extends StatelessWidget {
               required String toMeet,
               required String purpose,
               required File photoFile,
+              File? signatureFile,
               String? departmentId,
               String? departmentName,
             }) async {
@@ -245,6 +248,7 @@ class CheckInScreen extends StatelessWidget {
                 toMeet: toMeet,
                 purpose: purpose,
                 photoFile: photoFile,
+                signatureFile: signatureFile,
                 departmentId: departmentId,
                 departmentName: departmentName,
               );

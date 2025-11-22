@@ -15,7 +15,7 @@ class VisitorRepository {
     FirebaseFirestore? firestore,
     CloudinaryService? cloudinary,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _cloudinary = cloudinary ?? CloudinaryService();
+        _cloudinary = cloudinary ?? CloudinaryService();
 
   Future<void> createVisitor({
     required String name,
@@ -24,7 +24,7 @@ class VisitorRepository {
     required String toMeet,
     required String purpose,
     required File photoFile,
-    // NEW: optional department fields
+    File? signatureFile,
     String? departmentId,
     String? departmentName,
   }) async {
@@ -35,20 +35,32 @@ class VisitorRepository {
         'phone': phone,
         'departmentId': departmentId,
         'departmentName': departmentName,
+        'hasSignature': signatureFile != null,
       },
     );
     try {
       final photoUrl = await _cloudinary.uploadImage(photoFile);
       devLog('photoUploaded, URL obtained', params: {'photoUrl': photoUrl});
 
+      String? signatureUrl;
+      if (signatureFile != null) {
+        signatureUrl = await _cloudinary.uploadImage(
+          signatureFile,
+          folder: 'pass_point/visitor_signatures',
+        );
+        devLog('signatureUploaded, URL obtained', params: {'signatureUrl': signatureUrl});
+      }
+
       final id = Uuid().v4();
       final visitor = Visitor(
         id: id,
         name: name,
         phone: phone,
+        email: email,
         toMeet: toMeet,
         purpose: purpose,
         photoUrl: photoUrl,
+        signatureUrl: signatureUrl,
         checkInTime: Timestamp.now(),
         status: 'pending',
         departmentId: departmentId,

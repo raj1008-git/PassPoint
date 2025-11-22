@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../admin/screens/admin_dashboard_screen.dart';
 import 'checkin_screen.dart';
 
 class VisitorWelcomeScreen extends StatelessWidget {
@@ -213,14 +215,31 @@ class VisitorWelcomeScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            // Admin Login Button
+                            // Admin Access Button
                             TextButton.icon(
-                              onPressed: () {
-                                devLog('Admin Login button pressed');
-                                Navigator.of(context).pushNamed('/admin-login');
+                              onPressed: () async {
+                                devLog('Admin button pressed');
+                                final isLoggedIn =
+                                    await AuthService.isLoggedIn();
+                                if (!context.mounted) return;
+
+                                if (isLoggedIn) {
+                                  // Already logged in, go directly to dashboard
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const AdminDashboardScreen(),
+                                    ),
+                                  );
+                                } else {
+                                  // Not logged in, go to login screen
+                                  Navigator.of(
+                                    context,
+                                  ).pushNamed('/admin-login');
+                                }
                               },
                               icon: const Icon(Icons.shield_outlined, size: 18),
-                              label: const Text('Admin Login'),
+                              label: const Text('Admin Dashboard'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppTheme.dark,
                               ),

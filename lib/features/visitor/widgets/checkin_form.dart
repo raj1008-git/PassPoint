@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:signature/signature.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
@@ -16,6 +18,7 @@ typedef OnSubmitCallback =
       required String toMeet,
       required String purpose,
       required File photoFile,
+      File? signatureFile,
       String? departmentId,
       String? departmentName,
     });
@@ -37,11 +40,18 @@ class _CheckInFormState extends State<CheckInForm> {
   final _toMeetCtrl = TextEditingController();
   final _purposeCtrl = TextEditingController();
   File? _photoFile;
+  File? _signatureFile;
   bool _isSubmitting = false;
 
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
   final _manualDeptCtrl = TextEditingController();
+
+  final SignatureController _signatureController = SignatureController(
+    penStrokeWidth: 2,
+    penColor: Colors.black,
+    exportBackgroundColor: Colors.white,
+  );
 
   @override
   void dispose() {
@@ -51,6 +61,7 @@ class _CheckInFormState extends State<CheckInForm> {
     _toMeetCtrl.dispose();
     _purposeCtrl.dispose();
     _manualDeptCtrl.dispose();
+    _signatureController.dispose();
     super.dispose();
   }
 
@@ -67,12 +78,66 @@ class _CheckInFormState extends State<CheckInForm> {
     }
   }
 
+  Future<void> _captureSignature() async {
+    if (_signatureController.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please draw your signature first'),
+          backgroundColor: AppTheme.warning,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final Uint8List? data = await _signatureController.toPngBytes();
+      if (data == null) return;
+
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(data);
+
+      setState(() => _signatureFile = file);
+      devLog('Signature captured', params: {'path': file.path});
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signature captured successfully'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      devLog('Signature capture failed', params: {'error': e.toString()});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to capture signature: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_photoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please capture a photo'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+    if (_signatureFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please capture your signature'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -96,6 +161,7 @@ class _CheckInFormState extends State<CheckInForm> {
         toMeet: _toMeetCtrl.text.trim(),
         purpose: _purposeCtrl.text.trim(),
         photoFile: _photoFile!,
+        signatureFile: _signatureFile,
         departmentId: _selectedDepartmentId,
         departmentName: _selectedDepartmentName,
       );
@@ -182,7 +248,7 @@ class _CheckInFormState extends State<CheckInForm> {
 
                       const SizedBox(height: 32),
 
-                      // Form Fields - Two Column Layout for Tablet
+                      // Form Fields
                       if (isTablet) ...[
                         Row(
                           children: [
@@ -336,6 +402,11 @@ class _CheckInFormState extends State<CheckInForm> {
 
                       // Photo Capture
                       _buildPhotoCapture(),
+
+                      const SizedBox(height: 24),
+
+                      // Signature Pad
+                      _buildSignaturePad(),
 
                       const SizedBox(height: 32),
 
@@ -635,6 +706,122 @@ class _CheckInFormState extends State<CheckInForm> {
                   ),
                 ),
               ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignaturePad() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.greyLight.withOpacity(0.3),
+        borderRadius: AppTheme.radiusMedium,
+        border: Border.all(
+          color: _signatureFile == null
+              ? AppTheme.greyLight
+              : AppTheme.success.withOpacity(0.3),
+          width: 2,
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.edit, size: 18, color: AppTheme.primaryRed),
+              const SizedBox(width: 8),
+              const Text('Signature', style: AppTheme.labelLarge),
+              const Text(' *', style: TextStyle(color: AppTheme.error)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_signatureFile != null) ...[
+            ClipRRect(
+              borderRadius: AppTheme.radiusSmall,
+              child: Image.file(
+                _signatureFile!,
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                color: AppTheme.white,
+                colorBlendMode: BlendMode.darken,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: AppTheme.success,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Signature captured successfully',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _signatureFile = null;
+                      _signatureController.clear();
+                    });
+                  },
+                  child: const Text('Clear'),
+                ),
+              ],
+            ),
+          ] else ...[
+            Text(
+              'Please sign below',
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 150,
+              decoration: BoxDecoration(
+                color: AppTheme.white,
+                borderRadius: AppTheme.radiusSmall,
+                border: Border.all(color: AppTheme.greyLight, width: 1),
+              ),
+              child: Signature(
+                controller: _signatureController,
+                backgroundColor: AppTheme.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _signatureController.clear(),
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear'),
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.grey),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _captureSignature,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Capture Signature'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryRed,
+                    foregroundColor: AppTheme.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppTheme.radiusSmall,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
