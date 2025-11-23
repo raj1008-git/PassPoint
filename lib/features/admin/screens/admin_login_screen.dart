@@ -256,37 +256,37 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                               const SizedBox(height: 24),
 
                               // Demo Credentials Box
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.greyLight,
-                                  borderRadius: AppTheme.radiusSmall,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Demo Credentials:',
-                                      style: AppTheme.labelMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Username: admin@gmail.com',
-                                      style: AppTheme.bodySmall.copyWith(
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                    Text(
-                                      'Password: admin.login',
-                                      style: AppTheme.bodySmall.copyWith(
-                                        fontFamily: 'monospace',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // Container(
+                              //   padding: const EdgeInsets.all(16),
+                              //   decoration: BoxDecoration(
+                              //     color: AppTheme.greyLight,
+                              //     borderRadius: AppTheme.radiusSmall,
+                              //   ),
+                              //   child: Column(
+                              //     crossAxisAlignment: CrossAxisAlignment.start,
+                              //     children: [
+                              //       const Text(
+                              //         'Demo Credentials:',
+                              //         style: AppTheme.labelMedium,
+                              //       ),
+                              //       const SizedBox(height: 8),
+                              //       Text(
+                              //         'Username: admin@gmail.com',
+                              //         style: AppTheme.bodySmall.copyWith(
+                              //           fontFamily: 'monospace',
+                              //         ),
+                              //       ),
+                              //       Text(
+                              //         'Password: admin.login',
+                              //         style: AppTheme.bodySmall.copyWith(
+                              //           fontFamily: 'monospace',
+                              //         ),
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
 
-                              const SizedBox(height: 24),
+                              // const SizedBox(height: 24),
 
                               // Login Button
                               SizedBox(
