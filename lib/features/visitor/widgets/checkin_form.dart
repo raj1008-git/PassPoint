@@ -37,7 +37,6 @@ class _CheckInFormState extends State<CheckInForm> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _toMeetCtrl = TextEditingController();
   final _purposeCtrl = TextEditingController();
   File? _photoFile;
   File? _signatureFile;
@@ -45,7 +44,8 @@ class _CheckInFormState extends State<CheckInForm> {
 
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
-  final _manualDeptCtrl = TextEditingController();
+  List<String> _peopleInDepartment = [];
+  String? _selectedPerson;
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 2,
@@ -58,9 +58,7 @@ class _CheckInFormState extends State<CheckInForm> {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
-    _toMeetCtrl.dispose();
     _purposeCtrl.dispose();
-    _manualDeptCtrl.dispose();
     _signatureController.dispose();
     super.dispose();
   }
@@ -146,19 +144,12 @@ class _CheckInFormState extends State<CheckInForm> {
 
     setState(() => _isSubmitting = true);
 
-    if ((_selectedDepartmentName == null ||
-            _selectedDepartmentName!.trim().isEmpty) &&
-        (_manualDeptCtrl.text.trim().isNotEmpty)) {
-      _selectedDepartmentName = _manualDeptCtrl.text.trim();
-      _selectedDepartmentId = null;
-    }
-
     try {
       await widget.onSubmit(
         name: _nameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
         email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        toMeet: _toMeetCtrl.text.trim(),
+        toMeet: _selectedPerson ?? '',
         purpose: _purposeCtrl.text.trim(),
         photoFile: _photoFile!,
         signatureFile: _signatureFile,
@@ -282,60 +273,41 @@ class _CheckInFormState extends State<CheckInForm> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTextField(
-                                controller: _emailCtrl,
-                                label: 'Email Address',
-                                icon: Icons.email_outlined,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.done,
-                                required: false,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty)
-                                    return null;
-                                  final re = RegExp(
-                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                  );
-                                  return re.hasMatch(v.trim())
-                                      ? null
-                                      : 'Enter a valid email';
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildDepartmentField()),
-                          ],
+                        _buildTextField(
+                          controller: _emailCtrl,
+                          label: 'Email Address',
+                          icon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.done,
+                          required: false,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            final re = RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            );
+                            return re.hasMatch(v.trim())
+                                ? null
+                                : 'Enter a valid email';
+                          },
                         ),
                         const SizedBox(height: 16),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: _buildTextField(
-                                controller: _toMeetCtrl,
-                                label: 'Person to Meet',
-                                icon: Icons.people_outline,
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Enter who to meet'
-                                    : null,
-                              ),
-                            ),
+                            Expanded(child: _buildDepartmentField()),
                             const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildTextField(
-                                controller: _purposeCtrl,
-                                label: 'Purpose of Visit',
-                                icon: Icons.description_outlined,
-                                maxLines: 1,
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Enter purpose'
-                                    : null,
-                              ),
-                            ),
+                            Expanded(child: _buildPersonField()),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _purposeCtrl,
+                          label: 'Purpose of Visit',
+                          icon: Icons.description_outlined,
+                          maxLines: 2,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter purpose'
+                              : null,
                         ),
                       ] else ...[
                         _buildTextField(
@@ -380,14 +352,7 @@ class _CheckInFormState extends State<CheckInForm> {
                         const SizedBox(height: 16),
                         _buildDepartmentField(),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _toMeetCtrl,
-                          label: 'Person to Meet',
-                          icon: Icons.people_outline,
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Enter who to meet'
-                              : null,
-                        ),
+                        _buildPersonField(),
                         const SizedBox(height: 16),
                         _buildTextField(
                           controller: _purposeCtrl,
@@ -511,18 +476,35 @@ class _CheckInFormState extends State<CheckInForm> {
     return StreamBuilder<QuerySnapshot>(
       stream: _departmentsStream(),
       builder: (context, snap) {
-        if (snap.hasError || snap.data?.docs.isEmpty == true) {
-          return _buildTextField(
-            controller: _manualDeptCtrl,
-            label: 'Department',
-            icon: Icons.business_outlined,
-            validator: (v) {
-              if ((_selectedDepartmentId == null ||
-                      _selectedDepartmentId!.isEmpty) &&
-                  (v == null || v.trim().isEmpty))
-                return 'Enter department';
-              return null;
-            },
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.business_outlined,
+                    size: 18,
+                    color: AppTheme.primaryRed,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Department', style: AppTheme.labelLarge),
+                  const Text(' *', style: TextStyle(color: AppTheme.error)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.error.withOpacity(0.1),
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+                child: const Text(
+                  'Error loading departments',
+                  style: AppTheme.bodySmall,
+                ),
+              ),
+            ],
           );
         }
 
@@ -562,6 +544,38 @@ class _CheckInFormState extends State<CheckInForm> {
         }
 
         final docs = snap.data!.docs;
+        if (docs.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.business_outlined,
+                    size: 18,
+                    color: AppTheme.primaryRed,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Department', style: AppTheme.labelLarge),
+                  const Text(' *', style: TextStyle(color: AppTheme.error)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withOpacity(0.1),
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+                child: const Text(
+                  'No departments available',
+                  style: AppTheme.bodySmall,
+                ),
+              ),
+            ],
+          );
+        }
+
         final items = docs.map((d) {
           final data = d.data() as Map<String, dynamic>;
           return DropdownMenuItem<String>(
@@ -605,24 +619,26 @@ class _CheckInFormState extends State<CheckInForm> {
               value: _selectedDepartmentId,
               onTap: () => FocusScope.of(context).unfocus(),
               onChanged: (val) {
+                if (val == null) return;
+
                 final selDoc = docs.firstWhere((d) => d.id == val);
-                final name =
-                    (selDoc.data() as Map<String, dynamic>)['name']
-                        ?.toString() ??
-                    val;
+                final data = selDoc.data() as Map<String, dynamic>;
+                final name = (data['name'] ?? val).toString();
+                final people = (data['people'] as List?)?.cast<String>() ?? [];
+
                 setState(() {
                   _selectedDepartmentId = val;
                   _selectedDepartmentName = name;
+                  _peopleInDepartment = people;
+                  _selectedPerson = null; // Reset person selection
                 });
+
                 devLog(
                   'Department selected',
-                  params: {'id': val, 'name': name},
+                  params: {'id': val, 'name': name, 'people': people},
                 );
               },
               validator: (v) {
-                if ((_selectedDepartmentName != null) &&
-                    (_selectedDepartmentName!.trim().isNotEmpty))
-                  return null;
                 if (v == null || v.isEmpty) return 'Select department';
                 return null;
               },
@@ -630,6 +646,65 @@ class _CheckInFormState extends State<CheckInForm> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPersonField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.people_outline,
+              size: 18,
+              color: AppTheme.primaryRed,
+            ),
+            const SizedBox(width: 8),
+            const Text('Person to Meet', style: AppTheme.labelLarge),
+            const Text(' *', style: TextStyle(color: AppTheme.error)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          decoration: InputDecoration(
+            hintText: _selectedDepartmentId == null
+                ? 'Select department first'
+                : 'Select person',
+            hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+            filled: true,
+            fillColor: AppTheme.greyLight.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: AppTheme.radiusSmall,
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          items: _peopleInDepartment.isEmpty
+              ? null
+              : _peopleInDepartment.map((person) {
+                  return DropdownMenuItem<String>(
+                    value: person,
+                    child: Text(person),
+                  );
+                }).toList(),
+          value: _selectedPerson,
+          onTap: () => FocusScope.of(context).unfocus(),
+          onChanged: _selectedDepartmentId == null
+              ? null
+              : (val) {
+                  setState(() => _selectedPerson = val);
+                  devLog('Person selected', params: {'person': val});
+                },
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Select person to meet';
+            return null;
+          },
+        ),
+      ],
     );
   }
 
