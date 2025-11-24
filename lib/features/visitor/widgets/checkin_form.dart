@@ -290,6 +290,7 @@ class _CheckInFormState extends State<CheckInForm> {
                                 label: 'Email Address',
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.done,
                                 required: false,
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty)
@@ -364,6 +365,7 @@ class _CheckInFormState extends State<CheckInForm> {
                           label: 'Email Address',
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.done,
                           required: false,
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return null;
@@ -406,7 +408,7 @@ class _CheckInFormState extends State<CheckInForm> {
                       const SizedBox(height: 24),
 
                       // Signature Pad
-                      _buildSignaturePad(),
+                      _buildSignaturePad(isTablet),
 
                       const SizedBox(height: 32),
 
@@ -462,6 +464,7 @@ class _CheckInFormState extends State<CheckInForm> {
     String? Function(String?)? validator,
     int maxLines = 1,
     bool required = true,
+    TextInputAction? textInputAction,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,9 +484,9 @@ class _CheckInFormState extends State<CheckInForm> {
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           maxLines: maxLines,
-          textInputAction: maxLines > 1
-              ? TextInputAction.newline
-              : TextInputAction.next,
+          textInputAction:
+              textInputAction ??
+              (maxLines > 1 ? TextInputAction.newline : TextInputAction.next),
           decoration: InputDecoration(
             hintText: 'Enter ${label.toLowerCase()}',
             hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
@@ -600,6 +603,7 @@ class _CheckInFormState extends State<CheckInForm> {
               ),
               items: items,
               value: _selectedDepartmentId,
+              onTap: () => FocusScope.of(context).unfocus(),
               onChanged: (val) {
                 final selDoc = docs.firstWhere((d) => d.id == val);
                 final name =
@@ -713,7 +717,7 @@ class _CheckInFormState extends State<CheckInForm> {
     );
   }
 
-  Widget _buildSignaturePad() {
+  Widget _buildSignaturePad(bool isTablet) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -799,30 +803,60 @@ class _CheckInFormState extends State<CheckInForm> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _signatureController.clear(),
-                  icon: const Icon(Icons.clear, size: 18),
-                  label: const Text('Clear'),
-                  style: TextButton.styleFrom(foregroundColor: AppTheme.grey),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _captureSignature,
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Capture Signature'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryRed,
-                    foregroundColor: AppTheme.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppTheme.radiusSmall,
-                    ),
+            isTablet
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _signatureController.clear(),
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _captureSignature,
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Capture Signature'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryRed,
+                          foregroundColor: AppTheme.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppTheme.radiusSmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _captureSignature,
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Capture Signature'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryRed,
+                          foregroundColor: AppTheme.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppTheme.radiusSmall,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => _signatureController.clear(),
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.grey,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ],
         ],
       ),
