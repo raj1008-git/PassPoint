@@ -543,7 +543,7 @@ class _CheckInFormState extends State<CheckInForm> {
           );
         }
 
-        final docs = snap.data!.docs;
+        final docs = snap.data?.docs ?? [];
         if (docs.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,6 +601,9 @@ class _CheckInFormState extends State<CheckInForm> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              key: ValueKey(
+                _selectedDepartmentId,
+              ), // Fix: Force rebuild when selection changes
               decoration: InputDecoration(
                 hintText: 'Select department',
                 hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
@@ -617,7 +620,7 @@ class _CheckInFormState extends State<CheckInForm> {
               ),
               items: items,
               value: _selectedDepartmentId,
-              onTap: () => FocusScope.of(context).unfocus(),
+              isExpanded: true,
               onChanged: (val) {
                 if (val == null) return;
 
@@ -630,7 +633,8 @@ class _CheckInFormState extends State<CheckInForm> {
                   _selectedDepartmentId = val;
                   _selectedDepartmentName = name;
                   _peopleInDepartment = people;
-                  _selectedPerson = null; // Reset person selection
+                  _selectedPerson =
+                      null; // Reset person selection when department changes
                 });
 
                 devLog(
@@ -667,13 +671,20 @@ class _CheckInFormState extends State<CheckInForm> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          key: ValueKey(
+            '$_selectedDepartmentId-$_selectedPerson',
+          ), // Fix: Force rebuild on changes
           decoration: InputDecoration(
             hintText: _selectedDepartmentId == null
                 ? 'Select department first'
+                : _peopleInDepartment.isEmpty
+                ? 'No people in department'
                 : 'Select person',
             hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
             filled: true,
-            fillColor: AppTheme.greyLight.withOpacity(0.5),
+            fillColor: _selectedDepartmentId == null
+                ? AppTheme.greyLight.withOpacity(0.3)
+                : AppTheme.greyLight.withOpacity(0.5),
             border: OutlineInputBorder(
               borderRadius: AppTheme.radiusSmall,
               borderSide: BorderSide.none,
@@ -692,14 +703,16 @@ class _CheckInFormState extends State<CheckInForm> {
                   );
                 }).toList(),
           value: _selectedPerson,
-          onTap: () => FocusScope.of(context).unfocus(),
-          onChanged: _selectedDepartmentId == null
+          isExpanded: true,
+          onChanged:
+              _selectedDepartmentId == null || _peopleInDepartment.isEmpty
               ? null
               : (val) {
                   setState(() => _selectedPerson = val);
                   devLog('Person selected', params: {'person': val});
                 },
           validator: (v) {
+            if (_selectedDepartmentId == null) return 'Select department first';
             if (v == null || v.isEmpty) return 'Select person to meet';
             return null;
           },
