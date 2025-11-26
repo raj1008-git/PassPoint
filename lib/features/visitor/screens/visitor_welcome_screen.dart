@@ -17,21 +17,15 @@ class VisitorWelcomeScreen extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    // Always ask for PIN when accessing from welcome screen
     final enteredPin = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (_) => const PinDialog(),
     );
 
-    if (enteredPin == null || enteredPin.isEmpty) {
-      devLog('PIN entry cancelled');
-      return;
-    }
+    if (enteredPin == null || enteredPin.isEmpty) return;
 
-    // Verify PIN
     final isValidPin = await PinService.verifyPin(enteredPin);
-
     if (!context.mounted) return;
 
     if (!isValidPin) {
@@ -44,14 +38,11 @@ class VisitorWelcomeScreen extends StatelessWidget {
       return;
     }
 
-    // PIN is correct
     if (isLoggedIn) {
-      // Already logged in, go directly to dashboard
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
     } else {
-      // Not logged in, go to login screen
       Navigator.of(context).pushNamed('/admin-login');
     }
   }
@@ -61,222 +52,451 @@ class VisitorWelcomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isTablet = constraints.maxWidth > 600;
-            final maxWidth = isTablet ? 600.0 : constraints.maxWidth * 0.9;
+        child: OrientationBuilder(
+          builder: (context, orientation) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isTablet = constraints.maxWidth > 600;
+                final isLandscape = orientation == Orientation.landscape;
 
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isTablet ? 40 : 20,
-                    vertical: 40,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                final maxWidth = isTablet ? 600.0 : constraints.maxWidth * 0.9;
+
+                if (isLandscape && isTablet) {
+                  // ===============================
+                  // LANDSCAPE MODE (Tablet)
+                  // ===============================
+                  return Row(
                     children: [
-                      SizedBox(height: isTablet ? 60 : 40),
-                      // Logo and Brand
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryRed,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: AppTheme.elevatedShadow,
-                        ),
-                        child: const Icon(
-                          Icons.business,
-                          size: 50,
-                          color: AppTheme.white,
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      Text(
-                        'VisitorEase',
-                        style: AppTheme.h2.copyWith(
-                          color: AppTheme.primaryRed,
-                          fontSize: 28,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      Text(
-                        'Streamlined visitor management for modern organizations',
-                        style: AppTheme.bodyMedium.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      const SizedBox(height: 60),
-
-                      // Main Card
-                      Center(
-                        child: Container(
-                          width: maxWidth,
-                          padding: EdgeInsets.all(isTablet ? 48 : 32),
-                          decoration: BoxDecoration(
-                            color: AppTheme.white,
-                            borderRadius: AppTheme.radiusLarge,
-                            boxShadow: AppTheme.elevatedShadow,
+                      // LEFT SIDE = Logo + text (compact)
+                      Expanded(
+                        flex: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 20,
                           ),
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // Icon
                               Container(
                                 width: 80,
                                 height: 80,
                                 decoration: BoxDecoration(
                                   color: AppTheme.primaryRed,
                                   borderRadius: BorderRadius.circular(20),
+                                  boxShadow: AppTheme.elevatedShadow,
                                 ),
                                 child: const Icon(
-                                  Icons.person_add,
+                                  Icons.business,
                                   size: 40,
                                   color: AppTheme.white,
                                 ),
                               ),
-
-                              const SizedBox(height: 24),
-
-                              const Text(
-                                'Welcome to Our Office',
-                                style: AppTheme.h3,
-                                textAlign: TextAlign.center,
-                              ),
-
-                              const SizedBox(height: 12),
-
+                              const SizedBox(height: 16),
                               Text(
-                                'Please check in to notify your host of your arrival',
+                                'VisitorEase',
+                                style: AppTheme.h2.copyWith(
+                                  color: AppTheme.primaryRed,
+                                  fontSize: 24,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Streamlined visitor management\nfor modern organizations',
                                 style: AppTheme.bodyMedium.copyWith(
                                   color: AppTheme.textSecondary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                              const SizedBox(height: 32),
-
-                              // Check In Button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    devLog('Check In Now button pressed');
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const CheckInScreen(),
-                                      ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryRed,
-                                    foregroundColor: AppTheme.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: AppTheme.radiusMedium,
+                      // RIGHT SIDE = Main Card + Features
+                      Expanded(
+                        flex: 2,
+                        child: SingleChildScrollView(
+                          child: Center(
+                            child: Container(
+                              width: maxWidth,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 32,
+                              ),
+                              child: Column(
+                                children: [
+                                  // ----------- MAIN CARD ------------
+                                  Container(
+                                    padding: const EdgeInsets.all(32),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.white,
+                                      borderRadius: AppTheme.radiusLarge,
+                                      boxShadow: AppTheme.elevatedShadow,
                                     ),
-                                    elevation: 0,
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 70,
+                                          height: 70,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryRed,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.person_add,
+                                            size: 36,
+                                            color: AppTheme.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        const Text(
+                                          'Welcome to Our Office',
+                                          style: AppTheme.h3,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'Please check in to notify your host of your arrival',
+                                          style: AppTheme.bodyMedium.copyWith(
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 28),
+
+                                        // BUTTON
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 52,
+                                          child: ElevatedButton(
+                                            onPressed: () {
+                                              devLog('Check In Now pressed');
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      const CheckInScreen(),
+                                                ),
+                                              );
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  AppTheme.primaryRed,
+                                              foregroundColor: AppTheme.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    AppTheme.radiusMedium,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: const [
+                                                Icon(Icons.login, size: 22),
+                                                SizedBox(width: 10),
+                                                Text(
+                                                  'Check In Now',
+                                                  style: TextStyle(
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(Icons.login, size: 24),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'Check In Now',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
+
+                                  const SizedBox(height: 32),
+
+                                  // ------------ FEATURES STACKED -----------
+                                  // ------------ FEATURES HORIZONTAL -----------
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Expanded(
+                                        child: _FeatureCard(
+                                          icon: Icons.schedule,
+                                          iconColor: AppTheme.info,
+                                          title: 'Quick Process',
+                                          subtitle:
+                                              'Complete check-in in under 2 minutes',
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: _FeatureCard(
+                                          icon: Icons.notifications_active,
+                                          iconColor: AppTheme.success,
+                                          title: 'Instant Notification',
+                                          subtitle:
+                                              'Your host will be notified immediately',
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: _FeatureCard(
+                                          icon: Icons.security,
+                                          iconColor: AppTheme.totalPurpleIcon,
+                                          title: 'Secure & Private',
+                                          subtitle:
+                                              'Your data is protected and encrypted',
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
 
-                      const SizedBox(height: 48),
+                                  const SizedBox(height: 30),
 
-                      // Features
-                      Center(
-                        child: Container(
-                          width: maxWidth,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _FeatureCard(
-                                  icon: Icons.schedule,
-                                  iconColor: AppTheme.info,
-                                  title: 'Quick Process',
-                                  subtitle:
-                                      'Complete check-in in under 2 minutes',
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _FeatureCard(
-                                  icon: Icons.notifications_active,
-                                  iconColor: AppTheme.success,
-                                  title: 'Instant Notification',
-                                  subtitle:
-                                      'Your host will be notified immediately',
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _FeatureCard(
-                                  icon: Icons.security,
-                                  iconColor: AppTheme.totalPurpleIcon,
-                                  title: 'Secure & Private',
-                                  subtitle:
-                                      'Your data is protected and encrypted',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: isTablet ? 60 : 40),
-
-                      // Footer
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24),
-                        child: Column(
-                          children: [
-                            Text(
-                              '© 2025 VisitorEase. All rights reserved.',
-                              style: AppTheme.bodySmall.copyWith(
-                                color: AppTheme.textTertiary,
+                                  // FOOTER
+                                  Column(
+                                    children: [
+                                      Text(
+                                        '© 2025 VisitorEase. All rights reserved.',
+                                        style: AppTheme.bodySmall.copyWith(
+                                          color: AppTheme.textTertiary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      TextButton.icon(
+                                        onPressed: () =>
+                                            _handleAdminAccess(context),
+                                        icon: const Icon(
+                                          Icons.shield_outlined,
+                                          size: 18,
+                                        ),
+                                        label: const Text('Admin Dashboard'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppTheme.dark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            // Admin Access Button
-                            TextButton.icon(
-                              onPressed: () => _handleAdminAccess(context),
-                              icon: const Icon(Icons.shield_outlined, size: 18),
-                              label: const Text('Admin Dashboard'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppTheme.dark,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
+                  );
+                }
+
+                // ===========================
+                // PORTRAIT MODE (Original UI)
+                // ===========================
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 40,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(height: isTablet ? 60 : 40),
+
+                          // Logo
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryRed,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: AppTheme.elevatedShadow,
+                            ),
+                            child: const Icon(
+                              Icons.business,
+                              size: 50,
+                              color: AppTheme.white,
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          Text(
+                            'VisitorEase',
+                            style: AppTheme.h2.copyWith(
+                              color: AppTheme.primaryRed,
+                              fontSize: 28,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            'Streamlined visitor management for modern organizations',
+                            style: AppTheme.bodyMedium.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          const SizedBox(height: 60),
+
+                          // Main Card
+                          Center(
+                            child: Container(
+                              width: maxWidth,
+                              padding: EdgeInsets.all(isTablet ? 48 : 32),
+                              decoration: BoxDecoration(
+                                color: AppTheme.white,
+                                borderRadius: AppTheme.radiusLarge,
+                                boxShadow: AppTheme.elevatedShadow,
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryRed,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person_add,
+                                      size: 40,
+                                      color: AppTheme.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    'Welcome to Our Office',
+                                    style: AppTheme.h3,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Please check in to notify your host of your arrival',
+                                    style: AppTheme.bodyMedium.copyWith(
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 56,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        devLog('Check In Now button pressed');
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const CheckInScreen(),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryRed,
+                                        foregroundColor: AppTheme.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: AppTheme.radiusMedium,
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(Icons.login, size: 24),
+                                          SizedBox(width: 12),
+                                          Text(
+                                            'Check In Now',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 48),
+
+                          // Features Row
+                          Container(
+                            width: maxWidth,
+                            child: Row(
+                              children: const [
+                                Expanded(
+                                  child: _FeatureCard(
+                                    icon: Icons.schedule,
+                                    iconColor: AppTheme.info,
+                                    title: 'Quick Process',
+                                    subtitle:
+                                        'Complete check-in in under 2 minutes',
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _FeatureCard(
+                                    icon: Icons.notifications_active,
+                                    iconColor: AppTheme.success,
+                                    title: 'Instant Notification',
+                                    subtitle:
+                                        'Your host will be notified immediately',
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _FeatureCard(
+                                    icon: Icons.security,
+                                    iconColor: AppTheme.totalPurpleIcon,
+                                    title: 'Secure & Private',
+                                    subtitle:
+                                        'Your data is protected and encrypted',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: isTablet ? 60 : 40),
+
+                          // Footer
+                          Column(
+                            children: [
+                              Text(
+                                '© 2025 VisitorEase. All rights reserved.',
+                                style: AppTheme.bodySmall.copyWith(
+                                  color: AppTheme.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: () => _handleAdminAccess(context),
+                                icon: const Icon(
+                                  Icons.shield_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('Admin Dashboard'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.dark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         ),

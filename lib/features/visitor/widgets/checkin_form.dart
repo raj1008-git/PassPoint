@@ -52,6 +52,13 @@ class _CheckInFormState extends State<CheckInForm> {
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+  late final Stream<QuerySnapshot> _departmentStreamCached;
+
+  @override
+  void initState() {
+    super.initState();
+    _departmentStreamCached = _departmentsStream();
+  }
 
   @override
   void dispose() {
@@ -474,7 +481,7 @@ class _CheckInFormState extends State<CheckInForm> {
 
   Widget _buildDepartmentField() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _departmentsStream(),
+      stream: _departmentStreamCached,
       builder: (context, snap) {
         if (snap.hasError) {
           return Column(
@@ -601,9 +608,6 @@ class _CheckInFormState extends State<CheckInForm> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              key: ValueKey(
-                _selectedDepartmentId,
-              ), // Fix: Force rebuild when selection changes
               decoration: InputDecoration(
                 hintText: 'Select department',
                 hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
@@ -618,9 +622,17 @@ class _CheckInFormState extends State<CheckInForm> {
                   vertical: 14,
                 ),
               ),
+
+              // 👇 Fix: Let keyboard close fully before dropdown opens
+              onTap: () async {
+                FocusScope.of(context).unfocus();
+                await Future.delayed(const Duration(milliseconds: 180));
+              },
+
               items: items,
               value: _selectedDepartmentId,
               isExpanded: true,
+
               onChanged: (val) {
                 if (val == null) return;
 
@@ -634,7 +646,7 @@ class _CheckInFormState extends State<CheckInForm> {
                   _selectedDepartmentName = name;
                   _peopleInDepartment = people;
                   _selectedPerson =
-                      null; // Reset person selection when department changes
+                      null; // Reset person when department changes
                 });
 
                 devLog(
@@ -642,6 +654,7 @@ class _CheckInFormState extends State<CheckInForm> {
                   params: {'id': val, 'name': name, 'people': people},
                 );
               },
+
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Select department';
                 return null;
