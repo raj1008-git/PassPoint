@@ -2,7 +2,7 @@ name: pass_point
 description: A new Flutter project.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.1+6
+version: 1.0.1+9
 
 environment:
   sdk: ^3.9.2
@@ -27,6 +27,7 @@ dependencies:
   intl: ^0.18.1
   signature: ^6.3.0
   shared_preferences: ^2.5.3
+  carousel_slider: ^5.1.1
 
 dev_dependencies:
   flutter_test:
