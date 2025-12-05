@@ -28,6 +28,9 @@ dependencies:
   signature: ^6.3.0
   shared_preferences: ^2.5.3
   carousel_slider: ^5.1.1
+  google_mlkit_face_detection: ^0.13.1
+  tflite_flutter: ^0.12.1
+  image: ^4.5.4
 
 dev_dependencies:
   flutter_test:

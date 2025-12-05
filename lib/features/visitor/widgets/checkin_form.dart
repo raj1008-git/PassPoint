@@ -10,18 +10,18 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import 'camera_capture.dart';
 
-typedef OnSubmitCallback =
-    Future<void> Function({
-      required String name,
-      required String phone,
-      String? email,
-      required String toMeet,
-      required String purpose,
-      required File photoFile,
-      File? signatureFile,
-      String? departmentId,
-      String? departmentName,
-    });
+typedef OnSubmitCallback = Future<void> Function({
+required String name,
+required String phone,
+String? email,
+required String toMeet,
+required String purpose,
+required File photoFile,
+File? signatureFile,
+String? departmentId,
+String? departmentName,
+required int numberOfVisitors, // NEW PARAMETER
+});
 
 class CheckInForm extends StatefulWidget {
   final OnSubmitCallback onSubmit;
@@ -38,6 +38,7 @@ class _CheckInFormState extends State<CheckInForm> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _purposeCtrl = TextEditingController();
+  final _numberOfVisitorsCtrl = TextEditingController(text: '1'); // NEW CONTROLLER
   File? _photoFile;
   File? _signatureFile;
   bool _isSubmitting = false;
@@ -66,15 +67,16 @@ class _CheckInFormState extends State<CheckInForm> {
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _purposeCtrl.dispose();
+    _numberOfVisitorsCtrl.dispose(); // NEW DISPOSE
     _signatureController.dispose();
     super.dispose();
   }
 
   Future<void> _openCamera() async {
     devLog('Opening Camera Screen');
-    final file = await Navigator.of(
-      context,
-    ).push<File?>(MaterialPageRoute(builder: (_) => CameraCaptureScreen()));
+    final file = await Navigator.of(context).push<File?>(
+      MaterialPageRoute(builder: (_) => CameraCaptureScreen()),
+    );
     if (file != null) {
       setState(() => _photoFile = file);
       devLog('Photo returned from camera', params: {'path': file.path});
@@ -152,6 +154,8 @@ class _CheckInFormState extends State<CheckInForm> {
     setState(() => _isSubmitting = true);
 
     try {
+      final numberOfVisitors = int.tryParse(_numberOfVisitorsCtrl.text.trim()) ?? 1;
+
       await widget.onSubmit(
         name: _nameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
@@ -162,6 +166,7 @@ class _CheckInFormState extends State<CheckInForm> {
         signatureFile: _signatureFile,
         departmentId: _selectedDepartmentId,
         departmentName: _selectedDepartmentName,
+        numberOfVisitors: numberOfVisitors, // NEW PARAMETER
       );
       devLog('Form onSubmit completed successfully');
     } catch (e) {
@@ -256,7 +261,7 @@ class _CheckInFormState extends State<CheckInForm> {
                                 label: 'Full Name',
                                 icon: Icons.person_outline,
                                 validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
+                                (v == null || v.trim().isEmpty)
                                     ? 'Enter name'
                                     : null,
                               ),
@@ -272,7 +277,7 @@ class _CheckInFormState extends State<CheckInForm> {
                                   FilteringTextInputFormatter.digitsOnly,
                                 ],
                                 validator: (v) =>
-                                    (v == null || v.trim().length < 7)
+                                (v == null || v.trim().length < 7)
                                     ? 'Enter valid phone number'
                                     : null,
                               ),
@@ -280,22 +285,51 @@ class _CheckInFormState extends State<CheckInForm> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _emailCtrl,
-                          label: 'Email Address',
-                          icon: Icons.email_outlined,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.done,
-                          required: false,
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return null;
-                            final re = RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            );
-                            return re.hasMatch(v.trim())
-                                ? null
-                                : 'Enter a valid email';
-                          },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _emailCtrl,
+                                label: 'Email Address',
+                                icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.done,
+                                required: false,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return null;
+                                  final re = RegExp(
+                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                  );
+                                  return re.hasMatch(v.trim())
+                                      ? null
+                                      : 'Enter a valid email';
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // NEW NUMBER OF VISITORS FIELD
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _numberOfVisitorsCtrl,
+                                label: 'Number of Visitors',
+                                icon: Icons.group,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter number';
+                                  }
+                                  final num = int.tryParse(v.trim());
+                                  if (num == null || num < 1 || num > 50) {
+                                    return 'Enter 1-50';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -357,6 +391,27 @@ class _CheckInFormState extends State<CheckInForm> {
                           },
                         ),
                         const SizedBox(height: 16),
+                        // NEW NUMBER OF VISITORS FIELD
+                        _buildTextField(
+                          controller: _numberOfVisitorsCtrl,
+                          label: 'Number of Visitors',
+                          icon: Icons.group,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Enter number of visitors';
+                            }
+                            final num = int.tryParse(v.trim());
+                            if (num == null || num < 1 || num > 50) {
+                              return 'Enter between 1-50';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         _buildDepartmentField(),
                         const SizedBox(height: 16),
                         _buildPersonField(),
@@ -400,20 +455,20 @@ class _CheckInFormState extends State<CheckInForm> {
                           ),
                           child: _isSubmitting
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    color: AppTheme.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: AppTheme.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                               : const Text(
-                                  'Submit Check-In',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                            'Submit Check-In',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -457,7 +512,7 @@ class _CheckInFormState extends State<CheckInForm> {
           inputFormatters: inputFormatters,
           maxLines: maxLines,
           textInputAction:
-              textInputAction ??
+          textInputAction ??
               (maxLines > 1 ? TextInputAction.newline : TextInputAction.next),
           decoration: InputDecoration(
             hintText: 'Enter ${label.toLowerCase()}',
@@ -622,17 +677,13 @@ class _CheckInFormState extends State<CheckInForm> {
                   vertical: 14,
                 ),
               ),
-
-              // 👇 Fix: Let keyboard close fully before dropdown opens
               onTap: () async {
                 FocusScope.of(context).unfocus();
                 await Future.delayed(const Duration(milliseconds: 180));
               },
-
               items: items,
               value: _selectedDepartmentId,
               isExpanded: true,
-
               onChanged: (val) {
                 if (val == null) return;
 
@@ -645,8 +696,7 @@ class _CheckInFormState extends State<CheckInForm> {
                   _selectedDepartmentId = val;
                   _selectedDepartmentName = name;
                   _peopleInDepartment = people;
-                  _selectedPerson =
-                      null; // Reset person when department changes
+                  _selectedPerson = null;
                 });
 
                 devLog(
@@ -654,7 +704,6 @@ class _CheckInFormState extends State<CheckInForm> {
                   params: {'id': val, 'name': name, 'people': people},
                 );
               },
-
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Select department';
                 return null;
@@ -684,9 +733,7 @@ class _CheckInFormState extends State<CheckInForm> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          key: ValueKey(
-            '$_selectedDepartmentId-$_selectedPerson',
-          ), // Fix: Force rebuild on changes
+          key: ValueKey('$_selectedDepartmentId-$_selectedPerson'),
           decoration: InputDecoration(
             hintText: _selectedDepartmentId == null
                 ? 'Select department first'
@@ -710,20 +757,19 @@ class _CheckInFormState extends State<CheckInForm> {
           items: _peopleInDepartment.isEmpty
               ? null
               : _peopleInDepartment.map((person) {
-                  return DropdownMenuItem<String>(
-                    value: person,
-                    child: Text(person),
-                  );
-                }).toList(),
+            return DropdownMenuItem<String>(
+              value: person,
+              child: Text(person),
+            );
+          }).toList(),
           value: _selectedPerson,
           isExpanded: true,
-          onChanged:
-              _selectedDepartmentId == null || _peopleInDepartment.isEmpty
+          onChanged: _selectedDepartmentId == null || _peopleInDepartment.isEmpty
               ? null
               : (val) {
-                  setState(() => _selectedPerson = val);
-                  devLog('Person selected', params: {'person': val});
-                },
+            setState(() => _selectedPerson = val);
+            devLog('Person selected', params: {'person': val});
+          },
           validator: (v) {
             if (_selectedDepartmentId == null) return 'Select department first';
             if (v == null || v.isEmpty) return 'Select person to meet';
@@ -763,11 +809,7 @@ class _CheckInFormState extends State<CheckInForm> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: AppTheme.success,
-                  size: 20,
-                ),
+                const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -859,11 +901,7 @@ class _CheckInFormState extends State<CheckInForm> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: AppTheme.success,
-                  size: 20,
-                ),
+                const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -906,62 +944,61 @@ class _CheckInFormState extends State<CheckInForm> {
             const SizedBox(height: 12),
             isTablet
                 ? Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => _signatureController.clear(),
-                        icon: const Icon(Icons.clear, size: 18),
-                        label: const Text('Clear'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.grey,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: _captureSignature,
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Capture Signature'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryRed,
-                          foregroundColor: AppTheme.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppTheme.radiusSmall,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _captureSignature,
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Capture Signature'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryRed,
-                          foregroundColor: AppTheme.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppTheme.radiusSmall,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton.icon(
-                        onPressed: () => _signatureController.clear(),
-                        icon: const Icon(Icons.clear, size: 18),
-                        label: const Text('Clear'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.grey,
-                        ),
-                      ),
-                    ],
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _signatureController.clear(),
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.grey,
                   ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _captureSignature,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Capture Signature'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryRed,
+                    foregroundColor: AppTheme.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppTheme.radiusSmall,
+                    ),
+                  ),
+                ),
+              ],
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _captureSignature,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Capture Signature'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryRed,
+                    foregroundColor: AppTheme.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppTheme.radiusSmall,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => _signatureController.clear(),
+                  icon: const Icon(Icons.clear, size: 18),
+                  label: const Text('Clear'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.grey,
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
     );
   }
 }
-// final_checkin_form

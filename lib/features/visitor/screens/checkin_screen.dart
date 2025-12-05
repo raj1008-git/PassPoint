@@ -21,13 +21,18 @@ class CheckInScreen extends StatelessWidget {
     File? signatureFile,
     String? departmentId,
     String? departmentName,
+    required int numberOfVisitors, // NEW PARAMETER
   }) async {
     final repo = VisitorRepository();
 
     try {
       devLog(
         'Starting createVisitor flow',
-        params: {'name': name, 'department': departmentName},
+        params: {
+          'name': name,
+          'department': departmentName,
+          'numberOfVisitors': numberOfVisitors, // NEW LOG
+        },
       );
 
       await repo.createVisitor(
@@ -40,6 +45,7 @@ class CheckInScreen extends StatelessWidget {
         signatureFile: signatureFile,
         departmentId: departmentId,
         departmentName: departmentName,
+        numberOfVisitors: numberOfVisitors, // NEW PARAMETER
       );
 
       devLog('Visitor created, showing confirmation');
@@ -99,7 +105,9 @@ class CheckInScreen extends StatelessWidget {
                       const SizedBox(height: 12),
 
                       Text(
-                        'Your check-in request has been received',
+                        numberOfVisitors > 1
+                            ? 'Your group of $numberOfVisitors has been registered'
+                            : 'Your check-in request has been received',
                         style: AppTheme.bodyMedium.copyWith(
                           color: AppTheme.textSecondary,
                         ),
@@ -126,6 +134,15 @@ class CheckInScreen extends StatelessWidget {
                               label: 'Meeting With',
                               value: toMeet,
                               color: AppTheme.info,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InfoBox(
+                              icon: Icons.group,
+                              label: 'Visitors',
+                              value: numberOfVisitors.toString(),
+                              color: AppTheme.totalPurpleIcon,
                             ),
                           ),
                         ],
@@ -183,10 +200,6 @@ class CheckInScreen extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      /// ------- DONE BUTTON POSITION FIX -------
-                      ///
-                      /// Portrait → bottom full width
-                      /// Landscape Tablet → move to center/top area
                       if (isLandscape && isTablet)
                         Align(
                           alignment: Alignment.center,
@@ -271,31 +284,32 @@ class CheckInScreen extends StatelessWidget {
         ),
       ),
       body: CheckInForm(
-        onSubmit:
-            ({
-              required String name,
-              required String phone,
-              String? email,
-              required String toMeet,
-              required String purpose,
-              required File photoFile,
-              File? signatureFile,
-              String? departmentId,
-              String? departmentName,
-            }) async {
-              await _handleSubmit(
-                context: context,
-                name: name,
-                phone: phone,
-                email: email,
-                toMeet: toMeet,
-                purpose: purpose,
-                photoFile: photoFile,
-                signatureFile: signatureFile,
-                departmentId: departmentId,
-                departmentName: departmentName,
-              );
-            },
+        onSubmit: ({
+          required String name,
+          required String phone,
+          String? email,
+          required String toMeet,
+          required String purpose,
+          required File photoFile,
+          File? signatureFile,
+          String? departmentId,
+          String? departmentName,
+          required int numberOfVisitors, // NEW PARAMETER
+        }) async {
+          await _handleSubmit(
+            context: context,
+            name: name,
+            phone: phone,
+            email: email,
+            toMeet: toMeet,
+            purpose: purpose,
+            photoFile: photoFile,
+            signatureFile: signatureFile,
+            departmentId: departmentId,
+            departmentName: departmentName,
+            numberOfVisitors: numberOfVisitors, // NEW PARAMETER
+          );
+        },
       ),
     );
   }

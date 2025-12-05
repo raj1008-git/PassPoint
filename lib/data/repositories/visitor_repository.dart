@@ -27,6 +27,7 @@ class VisitorRepository {
     File? signatureFile,
     String? departmentId,
     String? departmentName,
+    int numberOfVisitors = 1, // NEW PARAMETER
   }) async {
     devLog(
       'Visitor Repository.createVisitor Called',
@@ -36,6 +37,7 @@ class VisitorRepository {
         'departmentId': departmentId,
         'departmentName': departmentName,
         'hasSignature': signatureFile != null,
+        'numberOfVisitors': numberOfVisitors, // NEW LOG
       },
     );
     try {
@@ -65,6 +67,7 @@ class VisitorRepository {
         status: 'pending',
         departmentId: departmentId,
         departmentName: departmentName,
+        numberOfVisitors: numberOfVisitors, // NEW FIELD
       );
       await _firestore.collection('visitors').doc(id).set(visitor.toMap());
       devLog('Visitor Saved to Firestore', params: {'id': id});
