@@ -8,6 +8,7 @@ import 'package:signature/signature.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../../data/repositories/visitor_repository.dart';
 import 'camera_capture.dart';
 
 typedef OnSubmitCallback = Future<void> Function({
@@ -42,7 +43,7 @@ class _CheckInFormState extends State<CheckInForm> {
   File? _photoFile;
   File? _signatureFile;
   bool _isSubmitting = false;
-
+  bool _isScanning = false; // ADD THIS
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
   List<String> _peopleInDepartment = [];
@@ -71,7 +72,84 @@ class _CheckInFormState extends State<CheckInForm> {
     _signatureController.dispose();
     super.dispose();
   }
+// ADD THIS METHOD in _CheckInFormState class
+  Future<void> _scanForExistingVisitor() async {
+    devLog('Opening camera for face scanning');
 
+    setState(() => _isScanning = true);
+
+    final file = await Navigator.of(context).push<File?>(
+      MaterialPageRoute(
+        builder: (_) => CameraCaptureScreen(isFaceScanning: true),
+      ),
+    );
+
+    if (file == null) {
+      setState(() => _isScanning = false);
+      return;
+    }
+
+    devLog('Face scan photo captured, searching for match');
+
+    try {
+      final repo = VisitorRepository();
+      final matchedVisitor = await repo.findVisitorByFace(file);
+
+      if (matchedVisitor != null) {
+        devLog('Match found!', params: {'name': matchedVisitor.name});
+
+        // Auto-fill the form
+        setState(() {
+          _nameCtrl.text = matchedVisitor.name;
+          _phoneCtrl.text = matchedVisitor.phone;
+          _emailCtrl.text = matchedVisitor.email ?? '';
+          _purposeCtrl.text = matchedVisitor.purpose;
+          _selectedDepartmentId = matchedVisitor.departmentId;
+          _selectedDepartmentName = matchedVisitor.departmentName;
+          _selectedPerson = matchedVisitor.toMeet;
+          _photoFile = file;
+          _isScanning = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${matchedVisitor.name}! 👋'),
+              backgroundColor: AppTheme.success,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        devLog('No match found');
+        setState(() {
+          _photoFile = file;
+          _isScanning = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No match found. Please fill in your details.'),
+              backgroundColor: AppTheme.info,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      devLog('Face scan error', params: {'error': e.toString()});
+      setState(() => _isScanning = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scan failed: ${e.toString()}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
+  }
   Future<void> _openCamera() async {
     devLog('Opening Camera Screen');
     final file = await Navigator.of(context).push<File?>(
@@ -795,71 +873,129 @@ class _CheckInFormState extends State<CheckInForm> {
         ),
       ),
       child: Column(
-        children: [
+          children: [
           if (_photoFile != null) ...[
-            ClipRRect(
-              borderRadius: AppTheme.radiusSmall,
-              child: Image.file(
-                _photoFile!,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
+      ClipRRect(
+      borderRadius: AppTheme.radiusSmall,
+      child: Image.file(
+        _photoFile!,
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
+    ),
+    const SizedBox(height: 16),
+    Row(
+    children: [
+    const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
+    const SizedBox(width: 8),
+    Expanded(
+    child: Text(
+    'Photo captured successfully',
+    style: AppTheme.bodyMedium.copyWith(
+    color: AppTheme.success,
+    fontWeight: FontWeight.w600,
+    ),
+    ),
+    ),
+    TextButton(onPressed: _openCamera, child: const Text('Retake')),
+    ],
+    ),
+    ] else ...[
+    Icon(
+    Icons.camera_alt_outlined,
+    size: 48,
+    color: AppTheme.grey.withOpacity(0.5),
+    ),
+    const SizedBox(height: 16),
+    const Text('Photo Required', style: AppTheme.labelLarge),
+    const SizedBox(height: 8),
+    Text(
+    'Please capture your photo for verification',
+    style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+    textAlign: TextAlign.center,
+    ),
+    const SizedBox(height: 16),
+
+    // NEW - Two buttons: Scan Face OR Capture Photo
+    Row(
+    children: [
+    Expanded(
+    child: SizedBox(
+    height: 48,
+    child: ElevatedButton.icon(
+    onPressed: _isScanning ? null : _scanForExistingVisitor,
+    icon: _isScanning
+    ? const SizedBox(
+    width: 16,
+    height: 16,
+    child: CircularProgressIndicator(
+    color: AppTheme.white,
+    strokeWidth: 2,
+    ),
+    )
+        : const Icon(Icons.face_retouching_natural),
+    label: Text(_isScanning ? 'Scanning...' : 'Scan Face'),
+    style: ElevatedButton.styleFrom(
+    backgroundColor: AppTheme.info,
+    foregroundColor: AppTheme.white,
+    shape: RoundedRectangleBorder(
+    borderRadius: AppTheme.radiusSmall,
+    ),
+    ),
+    ),
+    ),
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+    child: SizedBox(
+    height: 48,
+    child: OutlinedButton.icon(
+    onPressed: _openCamera,
+    icon: const Icon(Icons.camera_alt),
+    label: const Text('New Photo'),
+    style: OutlinedButton.styleFrom(
+    foregroundColor: AppTheme.primaryRed,
+    side: const BorderSide(color: AppTheme.primaryRed),
+    shape: RoundedRectangleBorder(
+    borderRadius: AppTheme.radiusSmall,
+    ),
+    ),
+    ),
+    ),
+    ),
+    ],
+    ),
+
+    const SizedBox(height: 12),
+    Container(
+    padding: const EdgeInsets.all(12
+    ),
+      decoration: BoxDecoration(
+        color: AppTheme.info.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: AppTheme.info),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Frequent visitor? Use "Scan Face" to auto-fill your details!',
+              style: AppTheme.bodySmall.copyWith(
+                color: AppTheme.info,
+                fontSize: 11,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Photo captured successfully',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.success,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                TextButton(onPressed: _openCamera, child: const Text('Retake')),
-              ],
-            ),
-          ] else ...[
-            Icon(
-              Icons.camera_alt_outlined,
-              size: 48,
-              color: AppTheme.grey.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            const Text('Photo Required', style: AppTheme.labelLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Please capture your photo for verification',
-              style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: _openCamera,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Capture Photo'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primaryRed,
-                  side: const BorderSide(color: AppTheme.primaryRed),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppTheme.radiusSmall,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
+      ),
+    ),
+          ],
+          ],
       ),
     );
   }
-
   Widget _buildSignaturePad(bool isTablet) {
     return Container(
       padding: const EdgeInsets.all(20),

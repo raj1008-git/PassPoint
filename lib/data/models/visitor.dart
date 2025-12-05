@@ -14,9 +14,10 @@ class Visitor {
   final String status;
   final String? departmentId;
   final String? departmentName;
-
-  // NEW FIELD
   final int numberOfVisitors;
+
+  // NEW - Face embedding for recognition
+  final List<double>? faceEmbedding;
 
   Visitor({
     required this.id,
@@ -32,7 +33,8 @@ class Visitor {
     this.status = 'pending',
     this.departmentId,
     this.departmentName,
-    this.numberOfVisitors = 1, // Default to 1 visitor
+    this.numberOfVisitors = 1,
+    this.faceEmbedding, // NEW
   });
 
   Map<String, dynamic> toMap() => {
@@ -49,7 +51,8 @@ class Visitor {
     'status': status,
     'departmentId': departmentId,
     'departmentName': departmentName,
-    'numberOfVisitors': numberOfVisitors, // NEW
+    'numberOfVisitors': numberOfVisitors,
+    'faceEmbedding': faceEmbedding, // NEW
   };
 
   factory Visitor.fromMap(Map<String, dynamic> map) {
@@ -71,7 +74,10 @@ class Visitor {
       status: map['status'] as String? ?? 'pending',
       departmentId: map['departmentId'] as String?,
       departmentName: map['departmentName'] as String?,
-      numberOfVisitors: map['numberOfVisitors'] as int? ?? 1, // NEW with fallback
+      numberOfVisitors: map['numberOfVisitors'] as int? ?? 1,
+      faceEmbedding: map['faceEmbedding'] != null // NEW
+          ? List<double>.from(map['faceEmbedding'] as List)
+          : null,
     );
   }
 }
