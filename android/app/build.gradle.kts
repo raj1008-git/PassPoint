@@ -29,7 +29,7 @@ android {
         versionName = flutter.versionName
     }
 
-    // 🔐 Load keystore properties safely
+    // 🔐 Load keystore properties
     val keystoreProperties = Properties().apply {
         val keystoreFile = rootProject.file("key.properties")
         if (keystoreFile.exists()) {
@@ -39,22 +39,16 @@ android {
 
     signingConfigs {
         create("release") {
-            val storeFilePath = keystoreProperties["storeFile"]?.toString()
-            if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
-            }
-            storePassword = keystoreProperties["storePassword"]?.toString() ?: ""
-            keyAlias = keystoreProperties["keyAlias"]?.toString() ?: ""
-            keyPassword = keystoreProperties["keyPassword"]?.toString() ?: ""
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
 
     buildTypes {
         getByName("release") {
-            // Only apply signing config if properties exist
-            if (keystoreProperties.isNotEmpty()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false
         }
