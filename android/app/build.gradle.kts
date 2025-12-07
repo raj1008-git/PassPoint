@@ -10,7 +10,7 @@ plugins {
 android {
     namespace = "com.nexora_ai.pass_point"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "25.1.8937393"
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
