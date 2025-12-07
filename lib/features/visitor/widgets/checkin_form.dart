@@ -11,18 +11,19 @@ import '../../../core/utils/dev.log.dart';
 import '../../../data/repositories/visitor_repository.dart';
 import 'camera_capture.dart';
 
-typedef OnSubmitCallback = Future<void> Function({
-required String name,
-required String phone,
-String? email,
-required String toMeet,
-required String purpose,
-required File photoFile,
-File? signatureFile,
-String? departmentId,
-String? departmentName,
-required int numberOfVisitors, // NEW PARAMETER
-});
+typedef OnSubmitCallback =
+    Future<void> Function({
+      required String name,
+      required String phone,
+      String? email,
+      required String toMeet,
+      required String purpose,
+      required File photoFile,
+      File? signatureFile,
+      String? departmentId,
+      String? departmentName,
+      required int numberOfVisitors,
+    });
 
 class CheckInForm extends StatefulWidget {
   final OnSubmitCallback onSubmit;
@@ -39,11 +40,11 @@ class _CheckInFormState extends State<CheckInForm> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _purposeCtrl = TextEditingController();
-  final _numberOfVisitorsCtrl = TextEditingController(text: '1'); // NEW CONTROLLER
+  final _numberOfVisitorsCtrl = TextEditingController(text: '1');
   File? _photoFile;
   File? _signatureFile;
   bool _isSubmitting = false;
-  bool _isScanning = false; // ADD THIS
+  bool _isScanning = false;
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
   List<String> _peopleInDepartment = [];
@@ -68,11 +69,11 @@ class _CheckInFormState extends State<CheckInForm> {
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _purposeCtrl.dispose();
-    _numberOfVisitorsCtrl.dispose(); // NEW DISPOSE
+    _numberOfVisitorsCtrl.dispose();
     _signatureController.dispose();
     super.dispose();
   }
-// ADD THIS METHOD in _CheckInFormState class
+
   Future<void> _scanForExistingVisitor() async {
     devLog('Opening camera for face scanning');
 
@@ -150,11 +151,12 @@ class _CheckInFormState extends State<CheckInForm> {
       }
     }
   }
+
   Future<void> _openCamera() async {
     devLog('Opening Camera Screen');
-    final file = await Navigator.of(context).push<File?>(
-      MaterialPageRoute(builder: (_) => CameraCaptureScreen()),
-    );
+    final file = await Navigator.of(
+      context,
+    ).push<File?>(MaterialPageRoute(builder: (_) => CameraCaptureScreen()));
     if (file != null) {
       setState(() => _photoFile = file);
       devLog('Photo returned from camera', params: {'path': file.path});
@@ -232,7 +234,8 @@ class _CheckInFormState extends State<CheckInForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      final numberOfVisitors = int.tryParse(_numberOfVisitorsCtrl.text.trim()) ?? 1;
+      final numberOfVisitors =
+          int.tryParse(_numberOfVisitorsCtrl.text.trim()) ?? 1;
 
       await widget.onSubmit(
         name: _nameCtrl.text.trim(),
@@ -244,7 +247,7 @@ class _CheckInFormState extends State<CheckInForm> {
         signatureFile: _signatureFile,
         departmentId: _selectedDepartmentId,
         departmentName: _selectedDepartmentName,
-        numberOfVisitors: numberOfVisitors, // NEW PARAMETER
+        numberOfVisitors: numberOfVisitors,
       );
       devLog('Form onSubmit completed successfully');
     } catch (e) {
@@ -329,6 +332,11 @@ class _CheckInFormState extends State<CheckInForm> {
 
                       const SizedBox(height: 32),
 
+                      // Photo Capture Section - NOW AT TOP
+                      _buildPhotoCapture(),
+
+                      const SizedBox(height: 24),
+
                       // Form Fields
                       if (isTablet) ...[
                         Row(
@@ -339,7 +347,7 @@ class _CheckInFormState extends State<CheckInForm> {
                                 label: 'Full Name',
                                 icon: Icons.person_outline,
                                 validator: (v) =>
-                                (v == null || v.trim().isEmpty)
+                                    (v == null || v.trim().isEmpty)
                                     ? 'Enter name'
                                     : null,
                               ),
@@ -355,7 +363,7 @@ class _CheckInFormState extends State<CheckInForm> {
                                   FilteringTextInputFormatter.digitsOnly,
                                 ],
                                 validator: (v) =>
-                                (v == null || v.trim().length < 7)
+                                    (v == null || v.trim().length < 7)
                                     ? 'Enter valid phone number'
                                     : null,
                               ),
@@ -374,7 +382,8 @@ class _CheckInFormState extends State<CheckInForm> {
                                 textInputAction: TextInputAction.done,
                                 required: false,
                                 validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return null;
+                                  if (v == null || v.trim().isEmpty)
+                                    return null;
                                   final re = RegExp(
                                     r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                                   );
@@ -385,11 +394,10 @@ class _CheckInFormState extends State<CheckInForm> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // NEW NUMBER OF VISITORS FIELD
                             Expanded(
                               child: _buildTextField(
                                 controller: _numberOfVisitorsCtrl,
-                                label: 'Number of Visitors',
+                                label: 'Number of Visitors Accompanied',
                                 icon: Icons.group,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: [
@@ -469,7 +477,6 @@ class _CheckInFormState extends State<CheckInForm> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        // NEW NUMBER OF VISITORS FIELD
                         _buildTextField(
                           controller: _numberOfVisitorsCtrl,
                           label: 'Number of Visitors',
@@ -507,11 +514,6 @@ class _CheckInFormState extends State<CheckInForm> {
 
                       const SizedBox(height: 24),
 
-                      // Photo Capture
-                      _buildPhotoCapture(),
-
-                      const SizedBox(height: 24),
-
                       // Signature Pad
                       _buildSignaturePad(isTablet),
 
@@ -533,20 +535,20 @@ class _CheckInFormState extends State<CheckInForm> {
                           ),
                           child: _isSubmitting
                               ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: AppTheme.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: AppTheme.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text(
-                            'Submit Check-In',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                                  'Submit Check-In',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -590,7 +592,7 @@ class _CheckInFormState extends State<CheckInForm> {
           inputFormatters: inputFormatters,
           maxLines: maxLines,
           textInputAction:
-          textInputAction ??
+              textInputAction ??
               (maxLines > 1 ? TextInputAction.newline : TextInputAction.next),
           decoration: InputDecoration(
             hintText: 'Enter ${label.toLowerCase()}',
@@ -835,19 +837,20 @@ class _CheckInFormState extends State<CheckInForm> {
           items: _peopleInDepartment.isEmpty
               ? null
               : _peopleInDepartment.map((person) {
-            return DropdownMenuItem<String>(
-              value: person,
-              child: Text(person),
-            );
-          }).toList(),
+                  return DropdownMenuItem<String>(
+                    value: person,
+                    child: Text(person),
+                  );
+                }).toList(),
           value: _selectedPerson,
           isExpanded: true,
-          onChanged: _selectedDepartmentId == null || _peopleInDepartment.isEmpty
+          onChanged:
+              _selectedDepartmentId == null || _peopleInDepartment.isEmpty
               ? null
               : (val) {
-            setState(() => _selectedPerson = val);
-            devLog('Person selected', params: {'person': val});
-          },
+                  setState(() => _selectedPerson = val);
+                  devLog('Person selected', params: {'person': val});
+                },
           validator: (v) {
             if (_selectedDepartmentId == null) return 'Select department first';
             if (v == null || v.isEmpty) return 'Select person to meet';
@@ -862,140 +865,178 @@ class _CheckInFormState extends State<CheckInForm> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.greyLight.withOpacity(0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _photoFile == null
+                ? AppTheme.greyLight.withOpacity(0.3)
+                : AppTheme.success.withOpacity(0.05),
+            _photoFile == null
+                ? AppTheme.greyLight.withOpacity(0.2)
+                : AppTheme.success.withOpacity(0.1),
+          ],
+        ),
         borderRadius: AppTheme.radiusMedium,
         border: Border.all(
           color: _photoFile == null
               ? AppTheme.greyLight
               : AppTheme.success.withOpacity(0.3),
           width: 2,
-          style: BorderStyle.solid,
         ),
       ),
       child: Column(
-          children: [
-          if (_photoFile != null) ...[
-      ClipRRect(
-      borderRadius: AppTheme.radiusSmall,
-      child: Image.file(
-        _photoFile!,
-        height: 200,
-        width: double.infinity,
-        fit: BoxFit.cover,
-      ),
-    ),
-    const SizedBox(height: 16),
-    Row(
-    children: [
-    const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
-    const SizedBox(width: 8),
-    Expanded(
-    child: Text(
-    'Photo captured successfully',
-    style: AppTheme.bodyMedium.copyWith(
-    color: AppTheme.success,
-    fontWeight: FontWeight.w600,
-    ),
-    ),
-    ),
-    TextButton(onPressed: _openCamera, child: const Text('Retake')),
-    ],
-    ),
-    ] else ...[
-    Icon(
-    Icons.camera_alt_outlined,
-    size: 48,
-    color: AppTheme.grey.withOpacity(0.5),
-    ),
-    const SizedBox(height: 16),
-    const Text('Photo Required', style: AppTheme.labelLarge),
-    const SizedBox(height: 8),
-    Text(
-    'Please capture your photo for verification',
-    style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
-    textAlign: TextAlign.center,
-    ),
-    const SizedBox(height: 16),
-
-    // NEW - Two buttons: Scan Face OR Capture Photo
-    Row(
-    children: [
-    Expanded(
-    child: SizedBox(
-    height: 48,
-    child: ElevatedButton.icon(
-    onPressed: _isScanning ? null : _scanForExistingVisitor,
-    icon: _isScanning
-    ? const SizedBox(
-    width: 16,
-    height: 16,
-    child: CircularProgressIndicator(
-    color: AppTheme.white,
-    strokeWidth: 2,
-    ),
-    )
-        : const Icon(Icons.face_retouching_natural),
-    label: Text(_isScanning ? 'Scanning...' : 'Scan Face'),
-    style: ElevatedButton.styleFrom(
-    backgroundColor: AppTheme.info,
-    foregroundColor: AppTheme.white,
-    shape: RoundedRectangleBorder(
-    borderRadius: AppTheme.radiusSmall,
-    ),
-    ),
-    ),
-    ),
-    ),
-    const SizedBox(width: 12),
-    Expanded(
-    child: SizedBox(
-    height: 48,
-    child: OutlinedButton.icon(
-    onPressed: _openCamera,
-    icon: const Icon(Icons.camera_alt),
-    label: const Text('New Photo'),
-    style: OutlinedButton.styleFrom(
-    foregroundColor: AppTheme.primaryRed,
-    side: const BorderSide(color: AppTheme.primaryRed),
-    shape: RoundedRectangleBorder(
-    borderRadius: AppTheme.radiusSmall,
-    ),
-    ),
-    ),
-    ),
-    ),
-    ],
-    ),
-
-    const SizedBox(height: 12),
-    Container(
-    padding: const EdgeInsets.all(12
-    ),
-      decoration: BoxDecoration(
-        color: AppTheme.info.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 16, color: AppTheme.info),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Frequent visitor? Use "Scan Face" to auto-fill your details!',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.info,
-                fontSize: 11,
+          if (_photoFile != null) ...[
+            ClipRRect(
+              borderRadius: AppTheme.radiusSmall,
+              child: Image.file(
+                _photoFile!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
             ),
-          ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: AppTheme.success,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Photo captured successfully',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.success,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _photoFile = null);
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Retake'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primaryRed,
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Icon(
+              Icons.camera_alt_outlined,
+              size: 48,
+              color: AppTheme.grey.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Photo Required',
+              style: AppTheme.labelLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please capture your photo for verification',
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+
+            // Two prominent buttons
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: _isScanning ? null : _scanForExistingVisitor,
+                icon: _isScanning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: AppTheme.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.face_retouching_natural, size: 24),
+                label: Text(
+                  _isScanning
+                      ? 'Scanning Face...'
+                      : 'Scan Face (Returning Visitor)',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.info,
+                  foregroundColor: AppTheme.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTheme.radiusSmall,
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: OutlinedButton.icon(
+                onPressed: _openCamera,
+                icon: const Icon(Icons.camera_alt, size: 24),
+                label: const Text(
+                  'Take New Photo (First Time Visitor)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryRed,
+                  side: const BorderSide(color: AppTheme.primaryRed, width: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTheme.radiusSmall,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.info.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: AppTheme.info,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Returning visitor? Use "Scan Face" to auto-fill your details instantly!',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.info,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
-      ),
-    ),
-          ],
-          ],
       ),
     );
   }
+
   Widget _buildSignaturePad(bool isTablet) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1037,7 +1078,11 @@ class _CheckInFormState extends State<CheckInForm> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.check_circle, color: AppTheme.success, size: 20),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppTheme.success,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1080,58 +1125,58 @@ class _CheckInFormState extends State<CheckInForm> {
             const SizedBox(height: 12),
             isTablet
                 ? Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _signatureController.clear(),
-                  icon: const Icon(Icons.clear, size: 18),
-                  label: const Text('Clear'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.grey,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _captureSignature,
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Capture Signature'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryRed,
-                    foregroundColor: AppTheme.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppTheme.radiusSmall,
-                    ),
-                  ),
-                ),
-              ],
-            )
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _signatureController.clear(),
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _captureSignature,
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Capture Signature'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryRed,
+                          foregroundColor: AppTheme.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppTheme.radiusSmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
                 : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _captureSignature,
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Capture Signature'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryRed,
-                    foregroundColor: AppTheme.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppTheme.radiusSmall,
-                    ),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _captureSignature,
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Capture Signature'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryRed,
+                          foregroundColor: AppTheme.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppTheme.radiusSmall,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => _signatureController.clear(),
+                        icon: const Icon(Icons.clear, size: 18),
+                        label: const Text('Clear'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.grey,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () => _signatureController.clear(),
-                  icon: const Icon(Icons.clear, size: 18),
-                  label: const Text('Clear'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.grey,
-                  ),
-                ),
-              ],
-            ),
           ],
         ],
       ),
