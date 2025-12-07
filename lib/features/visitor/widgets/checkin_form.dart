@@ -479,7 +479,7 @@ class _CheckInFormState extends State<CheckInForm> {
                         const SizedBox(height: 16),
                         _buildTextField(
                           controller: _numberOfVisitorsCtrl,
-                          label: 'Number of Visitors',
+                          label: 'Number of Visitors Accompanied',
                           icon: Icons.group,
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -487,7 +487,7 @@ class _CheckInFormState extends State<CheckInForm> {
                           ],
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
-                              return 'Enter number of visitors';
+                              return 'Enter number of visitors Accompanied';
                             }
                             final num = int.tryParse(v.trim());
                             if (num == null || num < 1 || num > 50) {
