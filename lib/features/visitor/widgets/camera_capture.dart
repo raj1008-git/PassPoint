@@ -7,7 +7,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 
 class CameraCaptureScreen extends StatefulWidget {
-  const CameraCaptureScreen({super.key});
+  final bool isFaceScanning; // NEW - flag for face scanning mode
+
+  const CameraCaptureScreen({
+    super.key,
+    this.isFaceScanning = false, // NEW
+  });
 
   @override
   State<CameraCaptureScreen> createState() => _CameraCaptureScreenState();
@@ -30,7 +35,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
 
       if (_cameras != null && _cameras!.isNotEmpty) {
         final CameraDescription frontCamera = _cameras!.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.front,
+              (camera) => camera.lensDirection == CameraLensDirection.front,
           orElse: () => _cameras!.first,
         );
         _controller = CameraController(
@@ -139,9 +144,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       );
     }
 
-    final size = MediaQuery.of(context).size;
-    final deviceRatio = size.width / size.height;
-
     return Scaffold(
       backgroundColor: AppTheme.dark,
       body: Stack(
@@ -203,7 +205,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Position your face in the frame',
+                        // NEW - Different instruction based on mode
+                        widget.isFaceScanning
+                            ? 'Look at the camera for face scan'
+                            : 'Position your face in the frame',
                         style: AppTheme.bodySmall.copyWith(
                           color: AppTheme.white,
                         ),
@@ -224,7 +229,10 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
               height: 300,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: AppTheme.white.withOpacity(0.5),
+                  // NEW - Different color for scanning
+                  color: widget.isFaceScanning
+                      ? AppTheme.info.withOpacity(0.7)
+                      : AppTheme.white.withOpacity(0.5),
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(150),
@@ -255,16 +263,24 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.info_outline,
+                          Icon(
+                            // NEW - Different icon
+                            widget.isFaceScanning
+                                ? Icons.face_retouching_natural
+                                : Icons.info_outline,
                             color: AppTheme.white,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Make sure your face is clearly visible',
-                            style: AppTheme.bodySmall.copyWith(
-                              color: AppTheme.white,
+                          Flexible(
+                            child: Text(
+                              // NEW - Different message
+                              widget.isFaceScanning
+                                  ? 'Scanning for existing visitor'
+                                  : 'Make sure your face is clearly visible',
+                              style: AppTheme.bodySmall.copyWith(
+                                color: AppTheme.white,
+                              ),
                             ),
                           ),
                         ],

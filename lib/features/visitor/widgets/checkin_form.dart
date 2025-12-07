@@ -8,6 +8,7 @@ import 'package:signature/signature.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../../data/repositories/visitor_repository.dart';
 import 'camera_capture.dart';
 
 typedef OnSubmitCallback =
@@ -21,6 +22,7 @@ typedef OnSubmitCallback =
       File? signatureFile,
       String? departmentId,
       String? departmentName,
+      required int numberOfVisitors,
     });
 
 class CheckInForm extends StatefulWidget {
@@ -37,32 +39,117 @@ class _CheckInFormState extends State<CheckInForm> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _toMeetCtrl = TextEditingController();
   final _purposeCtrl = TextEditingController();
+  final _numberOfVisitorsCtrl = TextEditingController(text: '1');
   File? _photoFile;
   File? _signatureFile;
   bool _isSubmitting = false;
-
+  bool _isScanning = false;
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
-  final _manualDeptCtrl = TextEditingController();
+  List<String> _peopleInDepartment = [];
+  String? _selectedPerson;
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 2,
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+  late final Stream<QuerySnapshot> _departmentStreamCached;
+
+  @override
+  void initState() {
+    super.initState();
+    _departmentStreamCached = _departmentsStream();
+  }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
-    _toMeetCtrl.dispose();
     _purposeCtrl.dispose();
-    _manualDeptCtrl.dispose();
+    _numberOfVisitorsCtrl.dispose();
     _signatureController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanForExistingVisitor() async {
+    devLog('Opening camera for face scanning');
+
+    setState(() => _isScanning = true);
+
+    final file = await Navigator.of(context).push<File?>(
+      MaterialPageRoute(
+        builder: (_) => CameraCaptureScreen(isFaceScanning: true),
+      ),
+    );
+
+    if (file == null) {
+      setState(() => _isScanning = false);
+      return;
+    }
+
+    devLog('Face scan photo captured, searching for match');
+
+    try {
+      final repo = VisitorRepository();
+      final matchedVisitor = await repo.findVisitorByFace(file);
+
+      if (matchedVisitor != null) {
+        devLog('Match found!', params: {'name': matchedVisitor.name});
+
+        // Auto-fill the form
+        setState(() {
+          _nameCtrl.text = matchedVisitor.name;
+          _phoneCtrl.text = matchedVisitor.phone;
+          _emailCtrl.text = matchedVisitor.email ?? '';
+          _purposeCtrl.text = matchedVisitor.purpose;
+          _selectedDepartmentId = matchedVisitor.departmentId;
+          _selectedDepartmentName = matchedVisitor.departmentName;
+          _selectedPerson = matchedVisitor.toMeet;
+          _photoFile = file;
+          _isScanning = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${matchedVisitor.name}! 👋'),
+              backgroundColor: AppTheme.success,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        devLog('No match found');
+        setState(() {
+          _photoFile = file;
+          _isScanning = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No match found. Please fill in your details.'),
+              backgroundColor: AppTheme.info,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      devLog('Face scan error', params: {'error': e.toString()});
+      setState(() => _isScanning = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scan failed: ${e.toString()}'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _openCamera() async {
@@ -146,24 +233,21 @@ class _CheckInFormState extends State<CheckInForm> {
 
     setState(() => _isSubmitting = true);
 
-    if ((_selectedDepartmentName == null ||
-            _selectedDepartmentName!.trim().isEmpty) &&
-        (_manualDeptCtrl.text.trim().isNotEmpty)) {
-      _selectedDepartmentName = _manualDeptCtrl.text.trim();
-      _selectedDepartmentId = null;
-    }
-
     try {
+      final numberOfVisitors =
+          int.tryParse(_numberOfVisitorsCtrl.text.trim()) ?? 1;
+
       await widget.onSubmit(
         name: _nameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
         email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        toMeet: _toMeetCtrl.text.trim(),
+        toMeet: _selectedPerson ?? '',
         purpose: _purposeCtrl.text.trim(),
         photoFile: _photoFile!,
         signatureFile: _signatureFile,
         departmentId: _selectedDepartmentId,
         departmentName: _selectedDepartmentName,
+        numberOfVisitors: numberOfVisitors,
       );
       devLog('Form onSubmit completed successfully');
     } catch (e) {
@@ -248,6 +332,11 @@ class _CheckInFormState extends State<CheckInForm> {
 
                       const SizedBox(height: 32),
 
+                      // Photo Capture Section - NOW AT TOP
+                      _buildPhotoCapture(),
+
+                      const SizedBox(height: 24),
+
                       // Form Fields
                       if (isTablet) ...[
                         Row(
@@ -305,37 +394,47 @@ class _CheckInFormState extends State<CheckInForm> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildDepartmentField()),
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _numberOfVisitorsCtrl,
+                                label: 'Number of Visitors Accompanied',
+                                icon: Icons.group,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Enter number';
+                                  }
+                                  final num = int.tryParse(v.trim());
+                                  if (num == null || num < 1 || num > 50) {
+                                    return 'Enter 1-50';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: _buildTextField(
-                                controller: _toMeetCtrl,
-                                label: 'Person to Meet',
-                                icon: Icons.people_outline,
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Enter who to meet'
-                                    : null,
-                              ),
-                            ),
+                            Expanded(child: _buildDepartmentField()),
                             const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildTextField(
-                                controller: _purposeCtrl,
-                                label: 'Purpose of Visit',
-                                icon: Icons.description_outlined,
-                                maxLines: 1,
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Enter purpose'
-                                    : null,
-                              ),
-                            ),
+                            Expanded(child: _buildPersonField()),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _purposeCtrl,
+                          label: 'Purpose of Visit',
+                          icon: Icons.description_outlined,
+                          maxLines: 2,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter purpose'
+                              : null,
                         ),
                       ] else ...[
                         _buildTextField(
@@ -378,16 +477,29 @@ class _CheckInFormState extends State<CheckInForm> {
                           },
                         ),
                         const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _numberOfVisitorsCtrl,
+                          label: 'Number of Visitors Accompanied',
+                          icon: Icons.group,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Enter number of visitors Accompanied';
+                            }
+                            final num = int.tryParse(v.trim());
+                            if (num == null || num < 1 || num > 50) {
+                              return 'Enter between 1-50';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         _buildDepartmentField(),
                         const SizedBox(height: 16),
-                        _buildTextField(
-                          controller: _toMeetCtrl,
-                          label: 'Person to Meet',
-                          icon: Icons.people_outline,
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Enter who to meet'
-                              : null,
-                        ),
+                        _buildPersonField(),
                         const SizedBox(height: 16),
                         _buildTextField(
                           controller: _purposeCtrl,
@@ -399,11 +511,6 @@ class _CheckInFormState extends State<CheckInForm> {
                               : null,
                         ),
                       ],
-
-                      const SizedBox(height: 24),
-
-                      // Photo Capture
-                      _buildPhotoCapture(),
 
                       const SizedBox(height: 24),
 
@@ -509,20 +616,37 @@ class _CheckInFormState extends State<CheckInForm> {
 
   Widget _buildDepartmentField() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _departmentsStream(),
+      stream: _departmentStreamCached,
       builder: (context, snap) {
-        if (snap.hasError || snap.data?.docs.isEmpty == true) {
-          return _buildTextField(
-            controller: _manualDeptCtrl,
-            label: 'Department',
-            icon: Icons.business_outlined,
-            validator: (v) {
-              if ((_selectedDepartmentId == null ||
-                      _selectedDepartmentId!.isEmpty) &&
-                  (v == null || v.trim().isEmpty))
-                return 'Enter department';
-              return null;
-            },
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.business_outlined,
+                    size: 18,
+                    color: AppTheme.primaryRed,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Department', style: AppTheme.labelLarge),
+                  const Text(' *', style: TextStyle(color: AppTheme.error)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.error.withOpacity(0.1),
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+                child: const Text(
+                  'Error loading departments',
+                  style: AppTheme.bodySmall,
+                ),
+              ),
+            ],
           );
         }
 
@@ -561,7 +685,39 @@ class _CheckInFormState extends State<CheckInForm> {
           );
         }
 
-        final docs = snap.data!.docs;
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.business_outlined,
+                    size: 18,
+                    color: AppTheme.primaryRed,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Department', style: AppTheme.labelLarge),
+                  const Text(' *', style: TextStyle(color: AppTheme.error)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withOpacity(0.1),
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+                child: const Text(
+                  'No departments available',
+                  style: AppTheme.bodySmall,
+                ),
+              ),
+            ],
+          );
+        }
+
         final items = docs.map((d) {
           final data = d.data() as Map<String, dynamic>;
           return DropdownMenuItem<String>(
@@ -601,28 +757,34 @@ class _CheckInFormState extends State<CheckInForm> {
                   vertical: 14,
                 ),
               ),
+              onTap: () async {
+                FocusScope.of(context).unfocus();
+                await Future.delayed(const Duration(milliseconds: 180));
+              },
               items: items,
               value: _selectedDepartmentId,
-              onTap: () => FocusScope.of(context).unfocus(),
+              isExpanded: true,
               onChanged: (val) {
+                if (val == null) return;
+
                 final selDoc = docs.firstWhere((d) => d.id == val);
-                final name =
-                    (selDoc.data() as Map<String, dynamic>)['name']
-                        ?.toString() ??
-                    val;
+                final data = selDoc.data() as Map<String, dynamic>;
+                final name = (data['name'] ?? val).toString();
+                final people = (data['people'] as List?)?.cast<String>() ?? [];
+
                 setState(() {
                   _selectedDepartmentId = val;
                   _selectedDepartmentName = name;
+                  _peopleInDepartment = people;
+                  _selectedPerson = null;
                 });
+
                 devLog(
                   'Department selected',
-                  params: {'id': val, 'name': name},
+                  params: {'id': val, 'name': name, 'people': people},
                 );
               },
               validator: (v) {
-                if ((_selectedDepartmentName != null) &&
-                    (_selectedDepartmentName!.trim().isNotEmpty))
-                  return null;
                 if (v == null || v.isEmpty) return 'Select department';
                 return null;
               },
@@ -633,18 +795,94 @@ class _CheckInFormState extends State<CheckInForm> {
     );
   }
 
+  Widget _buildPersonField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.people_outline,
+              size: 18,
+              color: AppTheme.primaryRed,
+            ),
+            const SizedBox(width: 8),
+            const Text('Person to Meet', style: AppTheme.labelLarge),
+            const Text(' *', style: TextStyle(color: AppTheme.error)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          key: ValueKey('$_selectedDepartmentId-$_selectedPerson'),
+          decoration: InputDecoration(
+            hintText: _selectedDepartmentId == null
+                ? 'Select department first'
+                : _peopleInDepartment.isEmpty
+                ? 'No people in department'
+                : 'Select person',
+            hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+            filled: true,
+            fillColor: _selectedDepartmentId == null
+                ? AppTheme.greyLight.withOpacity(0.3)
+                : AppTheme.greyLight.withOpacity(0.5),
+            border: OutlineInputBorder(
+              borderRadius: AppTheme.radiusSmall,
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          items: _peopleInDepartment.isEmpty
+              ? null
+              : _peopleInDepartment.map((person) {
+                  return DropdownMenuItem<String>(
+                    value: person,
+                    child: Text(person),
+                  );
+                }).toList(),
+          value: _selectedPerson,
+          isExpanded: true,
+          onChanged:
+              _selectedDepartmentId == null || _peopleInDepartment.isEmpty
+              ? null
+              : (val) {
+                  setState(() => _selectedPerson = val);
+                  devLog('Person selected', params: {'person': val});
+                },
+          validator: (v) {
+            if (_selectedDepartmentId == null) return 'Select department first';
+            if (v == null || v.isEmpty) return 'Select person to meet';
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
   Widget _buildPhotoCapture() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.greyLight.withOpacity(0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _photoFile == null
+                ? AppTheme.greyLight.withOpacity(0.3)
+                : AppTheme.success.withOpacity(0.05),
+            _photoFile == null
+                ? AppTheme.greyLight.withOpacity(0.2)
+                : AppTheme.success.withOpacity(0.1),
+          ],
+        ),
         borderRadius: AppTheme.radiusMedium,
         border: Border.all(
           color: _photoFile == null
               ? AppTheme.greyLight
               : AppTheme.success.withOpacity(0.3),
           width: 2,
-          style: BorderStyle.solid,
         ),
       ),
       child: Column(
@@ -677,7 +915,16 @@ class _CheckInFormState extends State<CheckInForm> {
                     ),
                   ),
                 ),
-                TextButton(onPressed: _openCamera, child: const Text('Retake')),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _photoFile = null);
+                  },
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Retake'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.primaryRed,
+                  ),
+                ),
               ],
             ),
           ] else ...[
@@ -687,28 +934,101 @@ class _CheckInFormState extends State<CheckInForm> {
               color: AppTheme.grey.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
-            const Text('Photo Required', style: AppTheme.labelLarge),
+            const Text(
+              'Photo Required',
+              style: AppTheme.labelLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             Text(
               'Please capture your photo for verification',
               style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // Two prominent buttons
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: _isScanning ? null : _scanForExistingVisitor,
+                icon: _isScanning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: AppTheme.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.face_retouching_natural, size: 24),
+                label: Text(
+                  _isScanning
+                      ? 'Scanning Face...'
+                      : 'Scan Face (Returning Visitor)',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.info,
+                  foregroundColor: AppTheme.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppTheme.radiusSmall,
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
               child: OutlinedButton.icon(
                 onPressed: _openCamera,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Capture Photo'),
+                icon: const Icon(Icons.camera_alt, size: 24),
+                label: const Text(
+                  'Take New Photo (First Time Visitor)',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.primaryRed,
-                  side: const BorderSide(color: AppTheme.primaryRed),
+                  side: const BorderSide(color: AppTheme.primaryRed, width: 2),
                   shape: RoundedRectangleBorder(
                     borderRadius: AppTheme.radiusSmall,
                   ),
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.info.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: AppTheme.info,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Returning visitor? Use "Scan Face" to auto-fill your details instantly!',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.info,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
