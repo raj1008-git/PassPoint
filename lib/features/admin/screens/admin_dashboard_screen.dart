@@ -24,7 +24,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+    ); // UPDATED: 5 tabs now
   }
 
   @override
@@ -154,6 +157,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       if (statusFilter == 'checked_in' && status != 'checked_in') return false;
       if (statusFilter == 'checked_out' && status != 'checked_out')
         return false;
+      if (statusFilter == 'rejected' && status != 'rejected')
+        return false; // NEW
 
       return true;
     }).toList();
@@ -165,6 +170,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     int pending = 0;
     int checkedIn = 0;
     int checkedOut = 0;
+    int rejected = 0; // NEW
 
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
@@ -172,12 +178,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       if (status == 'pending') pending++;
       if (status == 'checked_in') checkedIn++;
       if (status == 'checked_out') checkedOut++;
+      if (status == 'rejected') rejected++; // NEW
     }
 
     return {
       'pending': pending,
       'checked_in': checkedIn,
       'checked_out': checkedOut,
+      'rejected': rejected, // NEW
       'total': docs.length,
     };
   }
@@ -231,6 +239,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Back Button
+                                IconButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  icon: const Icon(Icons.arrow_back),
+                                  color: AppTheme.dark,
+                                  tooltip: 'Back to Home',
+                                ),
+                                const SizedBox(width: 8),
                                 Container(
                                   width: isTablet ? 48 : 40,
                                   height: isTablet ? 48 : 40,
@@ -367,7 +383,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       ),
                     ),
 
-                    // Stats Cards
+                    // Stats Cards - UPDATED WITH REJECTED CARD
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.all(isTablet ? 24 : 20),
@@ -412,6 +428,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 16),
+                                  // NEW - Rejected Card
+                                  Expanded(
+                                    child: StatCard(
+                                      icon: Icons.block,
+                                      title: 'Rejected',
+                                      subtitle: 'Meeting denied',
+                                      count: stats['rejected']!,
+                                      backgroundColor: AppTheme.rejectedRed,
+                                      iconColor: AppTheme.rejectedRedIcon,
+                                      borderColor: AppTheme.rejectedRedBorder,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
                                   Expanded(
                                     child: StatCard(
                                       icon: Icons.trending_up,
@@ -432,8 +461,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       Expanded(
                                         child: StatCard(
                                           icon: Icons.schedule,
-                                          title: 'Pending Approval',
-                                          subtitle: 'Awaiting check-in',
+                                          title: 'Pending',
+                                          subtitle: 'Awaiting',
                                           count: stats['pending']!,
                                           backgroundColor:
                                               AppTheme.pendingOrange,
@@ -447,7 +476,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                         child: StatCard(
                                           icon: Icons.how_to_reg,
                                           title: 'Checked In',
-                                          subtitle: 'Currently on premises',
+                                          subtitle: 'On premises',
                                           count: stats['checked_in']!,
                                           backgroundColor:
                                               AppTheme.checkedInGreen,
@@ -466,7 +495,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                         child: StatCard(
                                           icon: Icons.exit_to_app,
                                           title: 'Checked Out',
-                                          subtitle: 'Visit completed',
+                                          subtitle: 'Completed',
                                           count: stats['checked_out']!,
                                           backgroundColor:
                                               AppTheme.checkedOutBlue,
@@ -477,6 +506,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                         ),
                                       ),
                                       const SizedBox(width: 12),
+                                      // NEW - Rejected Card
+                                      Expanded(
+                                        child: StatCard(
+                                          icon: Icons.block,
+                                          title: 'Rejected',
+                                          subtitle: 'Denied',
+                                          count: stats['rejected']!,
+                                          backgroundColor: AppTheme.rejectedRed,
+                                          iconColor: AppTheme.rejectedRedIcon,
+                                          borderColor:
+                                              AppTheme.rejectedRedBorder,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
                                       Expanded(
                                         child: StatCard(
                                           icon: Icons.trending_up,
@@ -541,7 +588,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
                     const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-                    // Tabs and List
+                    // Tabs and List - UPDATED WITH REJECTED TAB
                     SliverFillRemaining(
                       child: Container(
                         margin: EdgeInsets.symmetric(
@@ -565,7 +612,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               ),
                               child: TabBar(
                                 controller: _tabController,
-                                isScrollable: false,
+                                isScrollable: !isTablet,
                                 labelColor: AppTheme.dark,
                                 unselectedLabelColor: AppTheme.grey,
                                 labelStyle: AppTheme.labelLarge,
@@ -580,6 +627,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     text:
                                         'Checked Out (${stats['checked_out']})',
                                   ),
+                                  // NEW - Rejected Tab
+                                  Tab(text: 'Rejected (${stats['rejected']})'),
                                   Tab(text: 'All (${stats['total']})'),
                                 ],
                               ),
@@ -591,6 +640,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   _buildList(context, docs, 'pending'),
                                   _buildList(context, docs, 'checked_in'),
                                   _buildList(context, docs, 'checked_out'),
+                                  _buildList(context, docs, 'rejected'), // NEW
                                   _buildList(context, docs, 'all'),
                                 ],
                               ),
@@ -632,7 +682,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             const Text('No visitors found', style: AppTheme.h3),
             const SizedBox(height: 8),
             Text(
-              'Visitors will appear here once they check in',
+              filter == 'rejected'
+                  ? 'Rejected visitors will appear here'
+                  : 'Visitors will appear here once they check in',
               style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
             ),
           ],

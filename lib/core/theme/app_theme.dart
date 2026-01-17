@@ -19,6 +19,11 @@ class AppTheme {
   static const Color checkedOutBlueBorder = Color(0xFF64B5F6);
   static const Color checkedOutBlueIcon = Color(0xFF2196F3);
 
+  // NEW - Rejected Status Colors
+  static const Color rejectedRed = Color(0xFFFFEBEE);
+  static const Color rejectedRedBorder = Color(0xFFEF5350);
+  static const Color rejectedRedIcon = Color(0xFFE53935);
+
   static const Color totalPurple = Color(0xFFF3E5F5);
   static const Color totalPurpleBorder = Color(0xFFBA68C8);
   static const Color totalPurpleIcon = Color(0xFF9C27B0);

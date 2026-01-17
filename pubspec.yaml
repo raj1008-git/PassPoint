@@ -1,8 +1,8 @@
 name: pass_point
 description: A new Flutter project.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.1+12
+version: 1.0.1+14
 
 environment:
   sdk: ^3.9.2
@@ -50,6 +50,7 @@ flutter:
   assets:
     - .env
     - assets/icon/app_logo.jpg # Include your logo here
+
 
   # Example fonts section (optional)
   # fonts:

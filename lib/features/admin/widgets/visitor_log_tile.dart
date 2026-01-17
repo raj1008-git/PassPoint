@@ -191,7 +191,7 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // Status Badge
+        // Status Badge - UPDATED WITH REJECTED STATUS
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
@@ -199,6 +199,8 @@ class VisitorLogTile extends StatelessWidget {
                 ? AppTheme.pendingOrange
                 : status == 'checked_in'
                 ? AppTheme.checkedInGreen
+                : status == 'rejected'
+                ? AppTheme.rejectedRed
                 : AppTheme.checkedOutBlue,
             borderRadius: BorderRadius.circular(20),
           ),
@@ -207,12 +209,16 @@ class VisitorLogTile extends StatelessWidget {
                 ? 'Pending Approval'
                 : status == 'checked_in'
                 ? 'Checked In'
+                : status == 'rejected'
+                ? 'Rejected'
                 : 'Checked Out',
             style: AppTheme.labelLarge.copyWith(
               color: status == 'pending'
                   ? AppTheme.pendingOrangeIcon
                   : status == 'checked_in'
                   ? AppTheme.checkedInGreenIcon
+                  : status == 'rejected'
+                  ? AppTheme.rejectedRedIcon
                   : AppTheme.checkedOutBlueIcon,
             ),
           ),
@@ -220,8 +226,8 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // Action Buttons
-        if (status == 'pending')
+        // Action Buttons - UPDATED WITH REJECT BUTTON
+        if (status == 'pending') ...[
           SizedBox(
             width: double.infinity,
             height: 48,
@@ -242,6 +248,55 @@ class VisitorLogTile extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          // NEW - Reject Button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                // Show confirmation dialog
+                final confirm = await showDialog<bool>(
+                  context: dialogContext,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Reject Visitor'),
+                    content: const Text(
+                      'Are you sure you want to reject this visitor request? This action will mark the visit as denied.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.error,
+                        ),
+                        child: const Text('Reject'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  Navigator.pop(dialogContext);
+                  await _updateStatus(id, {'status': 'rejected'});
+                  devLog('Rejected from dialog', params: {'id': id});
+                }
+              },
+              icon: const Icon(Icons.block),
+              label: const Text('Reject Request'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.error,
+                side: const BorderSide(color: AppTheme.error, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                ),
+              ),
+            ),
+          ),
+        ],
         if (status == 'checked_in')
           SizedBox(
             width: double.infinity,
@@ -264,6 +319,35 @@ class VisitorLogTile extends StatelessWidget {
                   borderRadius: AppTheme.radiusSmall,
                 ),
               ),
+            ),
+          ),
+        // NEW - Info for rejected status
+        if (status == 'rejected')
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.rejectedRed,
+              borderRadius: AppTheme.radiusSmall,
+              border: Border.all(color: AppTheme.rejectedRedBorder, width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.block,
+                  color: AppTheme.rejectedRedIcon,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'This visitor request was rejected',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppTheme.rejectedRedIcon,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -614,6 +698,7 @@ class VisitorLogTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // UPDATED - Status Badge with Rejected
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -624,6 +709,8 @@ class VisitorLogTile extends StatelessWidget {
                               ? AppTheme.warning.withOpacity(0.15)
                               : status == 'checked_in'
                               ? AppTheme.success.withOpacity(0.15)
+                              : status == 'rejected'
+                              ? AppTheme.error.withOpacity(0.15)
                               : AppTheme.grey.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -632,12 +719,16 @@ class VisitorLogTile extends StatelessWidget {
                               ? 'Pending'
                               : status == 'checked_in'
                               ? 'Checked In'
+                              : status == 'rejected'
+                              ? 'Rejected'
                               : 'Checked Out',
                           style: AppTheme.bodySmall.copyWith(
                             color: status == 'pending'
                                 ? AppTheme.warning
                                 : status == 'checked_in'
                                 ? AppTheme.success
+                                : status == 'rejected'
+                                ? AppTheme.error
                                 : AppTheme.grey,
                             fontWeight: FontWeight.w600,
                           ),
@@ -683,7 +774,7 @@ class VisitorLogTile extends StatelessWidget {
 
             const SizedBox(width: 16),
 
-            // Time and Action
+            // Time and Action - UPDATED WITH REJECT BUTTON
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -701,31 +792,96 @@ class VisitorLogTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (status == 'pending')
-                  ElevatedButton(
-                    onPressed: () async {
-                      await _updateStatus(id, {'status': 'checked_in'});
-                      devLog('Visitor checked in', params: {'id': id});
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.success,
-                      foregroundColor: AppTheme.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Reject Button
+                      ElevatedButton(
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Reject Visitor'),
+                              content: const Text(
+                                'Are you sure you want to reject this visitor request?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppTheme.error,
+                                  ),
+                                  child: const Text('Reject'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await _updateStatus(id, {'status': 'rejected'});
+                            devLog('Visitor rejected', params: {'id': id});
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.error,
+                          foregroundColor: AppTheme.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          minimumSize: Size.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.block, size: 16),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Reject',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ],
+                        ),
                       ),
-                      minimumSize: Size.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                      const SizedBox(width: 8),
+                      // Check In Button
+                      ElevatedButton(
+                        onPressed: () async {
+                          await _updateStatus(id, {'status': 'checked_in'});
+                          devLog('Visitor checked in', params: {'id': id});
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.success,
+                          foregroundColor: AppTheme.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          minimumSize: Size.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check, size: 16),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Check In',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.check, size: 16),
-                        const SizedBox(width: 4),
-                        const Text('Check In', style: TextStyle(fontSize: 13)),
-                      ],
-                    ),
+                    ],
                   ),
               ],
             ),
