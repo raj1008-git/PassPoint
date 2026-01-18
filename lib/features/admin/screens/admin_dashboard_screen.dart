@@ -383,86 +383,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       ),
                     ),
 
-                    // Stats Cards - UPDATED WITH REJECTED CARD
+                    // Stats Cards - HORIZONTAL SCROLL IN PORTRAIT
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.all(isTablet ? 24 : 20),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isTablet ? 24 : 20,
+                        ),
                         child: isTablet
-                            ? Row(
-                                children: [
-                                  Expanded(
-                                    child: StatCard(
-                                      icon: Icons.schedule,
-                                      title: 'Pending Approval',
-                                      subtitle: 'Awaiting check-in',
-                                      count: stats['pending']!,
-                                      backgroundColor: AppTheme.pendingOrange,
-                                      iconColor: AppTheme.pendingOrangeIcon,
-                                      borderColor: AppTheme.pendingOrangeBorder,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: StatCard(
-                                      icon: Icons.how_to_reg,
-                                      title: 'Checked In',
-                                      subtitle: 'Currently on premises',
-                                      count: stats['checked_in']!,
-                                      backgroundColor: AppTheme.checkedInGreen,
-                                      iconColor: AppTheme.checkedInGreenIcon,
-                                      borderColor:
-                                          AppTheme.checkedInGreenBorder,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: StatCard(
-                                      icon: Icons.exit_to_app,
-                                      title: 'Checked Out',
-                                      subtitle: 'Visit completed',
-                                      count: stats['checked_out']!,
-                                      backgroundColor: AppTheme.checkedOutBlue,
-                                      iconColor: AppTheme.checkedOutBlueIcon,
-                                      borderColor:
-                                          AppTheme.checkedOutBlueBorder,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // NEW - Rejected Card
-                                  Expanded(
-                                    child: StatCard(
-                                      icon: Icons.block,
-                                      title: 'Rejected',
-                                      subtitle: 'Meeting denied',
-                                      count: stats['rejected']!,
-                                      backgroundColor: AppTheme.rejectedRed,
-                                      iconColor: AppTheme.rejectedRedIcon,
-                                      borderColor: AppTheme.rejectedRedBorder,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: StatCard(
-                                      icon: Icons.trending_up,
-                                      title: 'Total Visitors',
-                                      subtitle: 'All time',
-                                      count: stats['total']!,
-                                      backgroundColor: AppTheme.totalPurple,
-                                      iconColor: AppTheme.totalPurpleIcon,
-                                      borderColor: AppTheme.totalPurpleBorder,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  Row(
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
                                     children: [
-                                      Expanded(
+                                      SizedBox(
+                                        width: 200,
                                         child: StatCard(
                                           icon: Icons.schedule,
-                                          title: 'Pending',
-                                          subtitle: 'Awaiting',
+                                          title: 'Pending Approval',
+                                          subtitle: 'Awaiting check-in',
                                           count: stats['pending']!,
                                           backgroundColor:
                                               AppTheme.pendingOrange,
@@ -471,12 +412,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               AppTheme.pendingOrangeBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
+                                      const SizedBox(width: 16),
+                                      SizedBox(
+                                        width: 200,
                                         child: StatCard(
                                           icon: Icons.how_to_reg,
                                           title: 'Checked In',
-                                          subtitle: 'On premises',
+                                          subtitle: 'Currently on premises',
                                           count: stats['checked_in']!,
                                           backgroundColor:
                                               AppTheme.checkedInGreen,
@@ -486,16 +428,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               AppTheme.checkedInGreenBorder,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
+                                      const SizedBox(width: 16),
+                                      SizedBox(
+                                        width: 200,
                                         child: StatCard(
                                           icon: Icons.exit_to_app,
                                           title: 'Checked Out',
-                                          subtitle: 'Completed',
+                                          subtitle: 'Visit completed',
                                           count: stats['checked_out']!,
                                           backgroundColor:
                                               AppTheme.checkedOutBlue,
@@ -505,13 +444,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               AppTheme.checkedOutBlueBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      // NEW - Rejected Card
-                                      Expanded(
+                                      const SizedBox(width: 16),
+                                      SizedBox(
+                                        width: 200,
                                         child: StatCard(
                                           icon: Icons.block,
                                           title: 'Rejected',
-                                          subtitle: 'Denied',
+                                          subtitle: 'Meeting denied',
                                           count: stats['rejected']!,
                                           backgroundColor: AppTheme.rejectedRed,
                                           iconColor: AppTheme.rejectedRedIcon,
@@ -519,12 +458,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               AppTheme.rejectedRedBorder,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
+                                      const SizedBox(width: 16),
+                                      SizedBox(
+                                        width: 200,
                                         child: StatCard(
                                           icon: Icons.trending_up,
                                           title: 'Total Visitors',
@@ -536,9 +472,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                               AppTheme.totalPurpleBorder,
                                         ),
                                       ),
+                                      const SizedBox(width: 24),
                                     ],
                                   ),
-                                ],
+                                ),
+                              )
+                            : SizedBox(
+                                height: 140,
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  children: [
+                                    SizedBox(
+                                      width: 160,
+                                      child: StatCard(
+                                        icon: Icons.schedule,
+                                        title: 'Pending',
+                                        subtitle: 'Awaiting',
+                                        count: stats['pending']!,
+                                        backgroundColor: AppTheme.pendingOrange,
+                                        iconColor: AppTheme.pendingOrangeIcon,
+                                        borderColor:
+                                            AppTheme.pendingOrangeBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 160,
+                                      child: StatCard(
+                                        icon: Icons.how_to_reg,
+                                        title: 'Checked In',
+                                        subtitle: 'On premises',
+                                        count: stats['checked_in']!,
+                                        backgroundColor:
+                                            AppTheme.checkedInGreen,
+                                        iconColor: AppTheme.checkedInGreenIcon,
+                                        borderColor:
+                                            AppTheme.checkedInGreenBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 160,
+                                      child: StatCard(
+                                        icon: Icons.exit_to_app,
+                                        title: 'Checked Out',
+                                        subtitle: 'Completed',
+                                        count: stats['checked_out']!,
+                                        backgroundColor:
+                                            AppTheme.checkedOutBlue,
+                                        iconColor: AppTheme.checkedOutBlueIcon,
+                                        borderColor:
+                                            AppTheme.checkedOutBlueBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 160,
+                                      child: StatCard(
+                                        icon: Icons.block,
+                                        title: 'Rejected',
+                                        subtitle: 'Denied',
+                                        count: stats['rejected']!,
+                                        backgroundColor: AppTheme.rejectedRed,
+                                        iconColor: AppTheme.rejectedRedIcon,
+                                        borderColor: AppTheme.rejectedRedBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 160,
+                                      child: StatCard(
+                                        icon: Icons.trending_up,
+                                        title: 'Total',
+                                        subtitle: 'All time',
+                                        count: stats['total']!,
+                                        backgroundColor: AppTheme.totalPurple,
+                                        iconColor: AppTheme.totalPurpleIcon,
+                                        borderColor: AppTheme.totalPurpleBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 20),
+                                  ],
+                                ),
                               ),
                       ),
                     ),
