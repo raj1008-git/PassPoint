@@ -7,6 +7,8 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/dev.log.dart';
 import 'features/admin/screens/admin_login_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
+import 'features/staff/screens/staff_dashboard_screen.dart';
+import 'features/staff/screens/staff_login_screen.dart';
 import 'features/visitor/bloc/visitor_bloc.dart';
 import 'features/visitor/bloc/visitor_event.dart';
 import 'features/visitor/screens/visitor_welcome_screen.dart';
@@ -54,6 +56,8 @@ class PassPointApp extends StatelessWidget {
           '/': (context) => const SplashScreen(),
           '/home': (context) => const VisitorWelcomeScreen(),
           '/admin-login': (context) => const AdminLoginScreen(),
+          '/staff-login': (context) => const StaffLoginScreen(),
+          '/staff-dashboard': (context) => const StaffDashboardScreen(),
         },
       ),
     );
