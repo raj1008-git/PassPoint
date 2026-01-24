@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/dev.log.dart';
 import 'features/admin/screens/admin_login_screen.dart';
+import 'features/splash/screens/role_selection_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
 import 'features/staff/screens/staff_dashboard_screen.dart';
 import 'features/staff/screens/staff_login_screen.dart';
@@ -54,6 +55,7 @@ class PassPointApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => const SplashScreen(),
+          '/role-selection': (context) => const RoleSelectionScreen(),
           '/home': (context) => const VisitorWelcomeScreen(),
           '/admin-login': (context) => const AdminLoginScreen(),
           '/staff-login': (context) => const StaffLoginScreen(),

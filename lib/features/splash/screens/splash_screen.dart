@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 
@@ -44,24 +43,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    _checkAuthAndNavigate();
+    _navigateToRoleSelection();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
+  Future<void> _navigateToRoleSelection() async {
     await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
 
-    final isLoggedIn = await AuthService.isLoggedIn();
-    devLog('Auth check complete', params: {'isLoggedIn': isLoggedIn});
+    devLog('Navigating to Role Selection Screen');
 
-    if (mounted) {
-      if (isLoggedIn) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        Navigator.of(context).pushReplacementNamed('/admin-login');
-      }
-    }
+    // UPDATED: Navigate to role selection instead of checking auth
+    Navigator.of(context).pushReplacementNamed('/role-selection');
   }
 
   @override
