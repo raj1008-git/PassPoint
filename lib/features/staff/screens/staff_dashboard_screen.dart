@@ -7,7 +7,6 @@ import '../../../core/utils/dev.log.dart';
 import '../../admin/widgets/stat_card.dart';
 import '../../admin/widgets/visitor_log_tile.dart';
 import '../../export/utils/file_writer.dart';
-import '../widgets/change_password_dialog.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
   const StaffDashboardScreen({Key? key}) : super(key: key);
@@ -88,12 +87,12 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
     }
   }
 
-  Future<void> _changePassword() async {
-    await showDialog(
-      context: context,
-      builder: (context) => const ChangePasswordDialog(),
-    );
-  }
+  // Future<void> _changePassword() async {
+  //   await showDialog(
+  //     context: context,
+  //     builder: (context) => const ChangePasswordDialog(),
+  //   );
+  // }
 
   Future<void> _exportAllAsCsv(List<QueryDocumentSnapshot> docs) async {
     final rows = docs.map((d) => d.data() as Map<String, dynamic>).toList();
@@ -368,21 +367,21 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                     ),
                                   ),
                                 ),
-                                OutlinedButton.icon(
-                                  onPressed: _changePassword,
-                                  icon: const Icon(Icons.lock_reset, size: 18),
-                                  label: const Text('Change Password'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.info,
-                                    side: const BorderSide(
-                                      color: AppTheme.greyLight,
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: isTablet ? 16 : 12,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                ),
+                                // OutlinedButton.icon(
+                                //   onPressed: _changePassword,
+                                //   icon: const Icon(Icons.lock_reset, size: 18),
+                                //   label: const Text('Change Password'),
+                                //   style: OutlinedButton.styleFrom(
+                                //     foregroundColor: AppTheme.info,
+                                //     side: const BorderSide(
+                                //       color: AppTheme.greyLight,
+                                //     ),
+                                //     padding: EdgeInsets.symmetric(
+                                //       horizontal: isTablet ? 16 : 12,
+                                //       vertical: 12,
+                                //     ),
+                                //   ),
+                                // ),
                                 OutlinedButton.icon(
                                   onPressed: _signOut,
                                   icon: const Icon(Icons.logout, size: 18),

@@ -1,43 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/services/pin_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
-import '../../admin/widgets/pin_dialog.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({Key? key}) : super(key: key);
 
-  Future<void> _handleReceptionistAccess(BuildContext context) async {
+  void _handleReceptionistAccess(BuildContext context) {
     devLog('Receptionist/Visitor button pressed');
-
-    final enteredPin = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const PinDialog(),
-    );
-
-    if (enteredPin == null || enteredPin.isEmpty) return;
-
-    final isValidPin = await PinService.verifyPin(enteredPin);
-    if (!context.mounted) return;
-
-    if (!isValidPin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Incorrect PIN code'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
-      return;
-    }
-
-    // PIN verified, go to welcome screen
-    Navigator.of(context).pushReplacementNamed('/home');
+    Navigator.of(context).pushNamed('/receptionist-login');
   }
 
   void _handleStaffAccess(BuildContext context) {
-    devLog('Staff Dashboard button pressed');
+    devLog('Staff Member button pressed');
     Navigator.of(context).pushNamed('/staff-login');
   }
 

@@ -7,6 +7,7 @@ import '../../../core/utils/dev.log.dart';
 import '../../export/utils/file_writer.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/visitor_log_tile.dart';
+import 'manage_departments_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -287,92 +288,115 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(16),
-                                          ),
-                                        ),
-                                        builder: (context) {
-                                          return Container(
-                                            padding: const EdgeInsets.all(24),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Text(
-                                                  'Export Visitor Log',
-                                                  style: AppTheme.h3,
-                                                ),
-                                                const SizedBox(height: 20),
-                                                ListTile(
-                                                  leading: const Icon(
-                                                    Icons.table_chart,
-                                                    color: AppTheme.success,
-                                                  ),
-                                                  title: const Text(
-                                                    'Export as CSV',
-                                                  ),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    _exportAllAsCsv(docs);
-                                                  },
-                                                ),
-                                                ListTile(
-                                                  leading: const Icon(
-                                                    Icons.code,
-                                                    color: AppTheme.info,
-                                                  ),
-                                                  title: const Text(
-                                                    'Export as JSON',
-                                                  ),
-                                                  onTap: () {
-                                                    Navigator.pop(context);
-                                                    _exportAllAsJson(docs);
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                    icon: const Icon(Icons.download, size: 18),
-                                    label: Text(
-                                      isTablet ? 'Export Log' : 'Export',
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ManageDepartmentsScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.business, size: 18),
+                                  label: Text(
+                                    isTablet
+                                        ? 'Manage Departments'
+                                        : 'Departments',
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryRed,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dark,
-                                      side: const BorderSide(
-                                        color: AppTheme.greyLight,
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: isTablet ? 16 : 12,
-                                        vertical: 12,
-                                      ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 16 : 12,
+                                      vertical: 12,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: _signOut,
-                                    icon: const Icon(Icons.logout, size: 18),
-                                    label: const Text('Logout'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.error,
-                                      side: const BorderSide(
-                                        color: AppTheme.greyLight,
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(16),
+                                        ),
                                       ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: isTablet ? 16 : 12,
-                                        vertical: 12,
-                                      ),
+                                      builder: (context) {
+                                        return Container(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Text(
+                                                'Export Visitor Log',
+                                                style: AppTheme.h3,
+                                              ),
+                                              const SizedBox(height: 20),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.table_chart,
+                                                  color: AppTheme.success,
+                                                ),
+                                                title: const Text(
+                                                  'Export as CSV',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  _exportAllAsCsv(docs);
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.code,
+                                                  color: AppTheme.info,
+                                                ),
+                                                title: const Text(
+                                                  'Export as JSON',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  _exportAllAsJson(docs);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                  icon: const Icon(Icons.download, size: 18),
+                                  label: Text(
+                                    isTablet ? 'Export Log' : 'Export',
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.dark,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 16 : 12,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _signOut,
+                                  icon: const Icon(Icons.logout, size: 18),
+                                  label: const Text('Logout'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.error,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 16 : 12,
+                                      vertical: 12,
                                     ),
                                   ),
                                 ),

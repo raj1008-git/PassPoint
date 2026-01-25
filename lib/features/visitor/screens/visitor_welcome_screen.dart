@@ -425,39 +425,12 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        // UPDATED - Two buttons side by side
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextButton.icon(
-              onPressed: () => _handleAdminAccess(context),
-              icon: const Icon(Icons.shield_outlined, size: 16),
-              label: const Text(
-                'Admin Dashboard',
-                style: TextStyle(fontSize: 13),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.textSecondary,
-              ),
-            ),
-            Container(
-              width: 1,
-              height: 20,
-              color: AppTheme.textTertiary.withOpacity(0.3),
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed('/staff-login'),
-              icon: const Icon(Icons.people_alt_outlined, size: 16),
-              label: const Text(
-                'Staff Dashboard',
-                style: TextStyle(fontSize: 13),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.textSecondary,
-              ),
-            ),
-          ],
+        // Admin Dashboard button (with PIN protection)
+        TextButton.icon(
+          onPressed: () => _handleAdminAccess(context),
+          icon: const Icon(Icons.shield_outlined, size: 16),
+          label: const Text('Admin Dashboard', style: TextStyle(fontSize: 13)),
+          style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
         ),
       ],
     );
