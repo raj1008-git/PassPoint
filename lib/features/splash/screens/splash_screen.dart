@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/services/receptionist_auth_service.dart';
+import '../../../core/services/staff_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 
@@ -43,18 +45,39 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    _navigateToRoleSelection();
+    _checkAuthAndNavigate();
   }
 
-  Future<void> _navigateToRoleSelection() async {
+  Future<void> _checkAuthAndNavigate() async {
     await Future.delayed(const Duration(seconds: 3));
 
     if (!mounted) return;
 
-    devLog('Navigating to Role Selection Screen');
+    // Check if receptionist is logged in
+    final isReceptionistLoggedIn = await ReceptionistAuthService.isLoggedIn();
+    if (isReceptionistLoggedIn) {
+      devLog('Receptionist logged in, navigating to Welcome Screen');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+      return;
+    }
 
-    // UPDATED: Navigate to role selection instead of checking auth
-    Navigator.of(context).pushReplacementNamed('/role-selection');
+    // Check if staff is logged in
+    final isStaffLoggedIn = await StaffAuthService.isLoggedIn();
+    if (isStaffLoggedIn) {
+      devLog('Staff logged in, navigating to Staff Dashboard');
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/staff-dashboard');
+      }
+      return;
+    }
+
+    // No one logged in, navigate to role selection
+    devLog('No user logged in, navigating to Role Selection Screen');
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/role-selection');
+    }
   }
 
   @override

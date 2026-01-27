@@ -1,44 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/services/pin_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
-import '../../admin/widgets/pin_dialog.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({Key? key}) : super(key: key);
 
-  Future<void> _handleReceptionistAccess(BuildContext context) async {
-    devLog('Receptionist/Visitor button pressed');
-
-    final enteredPin = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const PinDialog(),
-    );
-
-    if (enteredPin == null || enteredPin.isEmpty) return;
-
-    final isValidPin = await PinService.verifyPin(enteredPin);
-    if (!context.mounted) return;
-
-    if (!isValidPin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Incorrect PIN code'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
-      return;
-    }
-
-    // PIN verified, go to welcome screen
-    Navigator.of(context).pushReplacementNamed('/home');
+  void _handleReceptionistAccess(BuildContext context) {
+    devLog('Receptionist button pressed');
+    Navigator.of(context).pushNamed('/receptionist-login');
   }
 
   void _handleStaffAccess(BuildContext context) {
-    devLog('Staff Dashboard button pressed');
-    Navigator.of(context).pushNamed('/staff-login');
+    devLog('Prabhu Staff button pressed');
+    Navigator.of(context).pushNamed('/staff-auth');
   }
 
   @override
@@ -98,8 +73,8 @@ class RoleSelectionScreen extends StatelessWidget {
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
-                                title: 'Receptionist / Visitor',
-                                subtitle: 'Access visitor check-in system',
+                                title: 'Reception',
+                                subtitle: 'Admin access & visitor management',
                                 icon: Icons.business_center,
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -117,7 +92,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
-                                title: 'Staff Member',
+                                title: 'Prabhu Staff',
                                 subtitle: 'View your visitor requests',
                                 icon: Icons.people_alt,
                                 gradient: LinearGradient(
@@ -139,8 +114,8 @@ class RoleSelectionScreen extends StatelessWidget {
                           children: [
                             _buildRoleCard(
                               context: context,
-                              title: 'Receptionist / Visitor',
-                              subtitle: 'Access visitor check-in system',
+                              title: 'Reception',
+                              subtitle: 'Admin access & visitor management',
                               icon: Icons.business_center,
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -156,7 +131,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             SizedBox(height: isTablet ? 24 : 20),
                             _buildRoleCard(
                               context: context,
-                              title: 'Staff Member',
+                              title: 'Prabhu Staff',
                               subtitle: 'View your visitor requests',
                               icon: Icons.people_alt,
                               gradient: LinearGradient(

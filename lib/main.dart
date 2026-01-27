@@ -1,18 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/utils/dev.log.dart';
-import 'features/admin/screens/admin_login_screen.dart';
+import 'features/admin/screens/receptionist_login_screen.dart';
 import 'features/splash/screens/role_selection_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
-import 'features/staff/screens/staff_dashboard_screen.dart';
-import 'features/staff/screens/staff_login_screen.dart';
-import 'features/visitor/bloc/visitor_bloc.dart';
-import 'features/visitor/bloc/visitor_event.dart';
-import 'features/visitor/screens/visitor_welcome_screen.dart';
+import 'features/staff/screens/staff_auth_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -33,35 +28,27 @@ class PassPointApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<VisitorBloc>(
-          create: (context) => VisitorBloc()..add(VisitorInitEvent()),
+    return MaterialApp(
+      title: 'PassPoint',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: AppTheme.primaryRed,
+        scaffoldBackgroundColor: AppTheme.background,
+        fontFamily: 'Roboto',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppTheme.primaryRed,
+          primary: AppTheme.primaryRed,
         ),
-      ],
-      child: MaterialApp(
-        title: 'PassPoint',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primaryColor: AppTheme.primaryRed,
-          scaffoldBackgroundColor: AppTheme.background,
-          fontFamily: 'Roboto',
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppTheme.primaryRed,
-            primary: AppTheme.primaryRed,
-          ),
-          useMaterial3: true,
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const SplashScreen(),
-          '/role-selection': (context) => const RoleSelectionScreen(),
-          '/home': (context) => const VisitorWelcomeScreen(),
-          '/admin-login': (context) => const AdminLoginScreen(),
-          '/staff-login': (context) => const StaffLoginScreen(),
-          '/staff-dashboard': (context) => const StaffDashboardScreen(),
-        },
+        useMaterial3: true,
       ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/role-selection': (context) => const RoleSelectionScreen(),
+        '/receptionist-login': (context) => const ReceptionistLoginScreen(),
+        '/staff-auth': (context) => const StaffAuthScreen(),
+        // Note: Other routes like /home, /staff-dashboard will be added in next phases
+      },
     );
   }
 }
