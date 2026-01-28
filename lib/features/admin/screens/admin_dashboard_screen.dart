@@ -786,6 +786,7 @@ import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../export/utils/file_writer.dart';
+import '../widgets/receptionist_change_password_dialog.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/visitor_log_tile.dart';
 import 'department_management_screen.dart';
@@ -1175,6 +1176,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   label: const Text('Approvals'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppTheme.info,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 16 : 12,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    await showDialog(
+                                      context: context,
+                                      builder: (_) =>
+                                          const ReceptionistChangePasswordDialog(),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.lock_reset, size: 18),
+                                  label: const Text('Change Password'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryRed,
                                     side: const BorderSide(
                                       color: AppTheme.greyLight,
                                     ),

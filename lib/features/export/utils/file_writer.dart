@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:pass_point/core/utils/dev.log.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,7 +26,24 @@ class FileWriter {
           headers.map((h) {
             final v = r[h];
             if (v == null) return '';
-            if (v is Map || v is List) return jsonEncode(v);
+
+            // Handle Firestore Timestamp
+            if (v is Timestamp) {
+              final dt = v.toDate();
+              return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            }
+
+            // Handle lists (like faceEmbedding) - skip or summarize
+            if (v is List) {
+              if (h == 'faceEmbedding') return '[Face Data]';
+              return jsonEncode(v);
+            }
+
+            // Handle maps
+            if (v is Map) return jsonEncode(v);
+
+            // Handle regular values
+            return v.toString();
           }).toList(),
         );
       }
