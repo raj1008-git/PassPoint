@@ -13,7 +13,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
-  equatable: ^2.0.7
+  equatable: ^2.0.8
   firebase_core: ^4.2.1
   cloud_firestore: ^6.1.0
   firebase_auth: ^6.1.2
@@ -24,9 +24,9 @@ dependencies:
   csv: ^6.0.0
   uuid: ^4.5.2
   flutter_dotenv: ^6.0.0
-  intl: ^0.18.1
+  intl: ^0.20.2
   signature: ^6.3.0
-  shared_preferences: ^2.5.3
+  shared_preferences: ^2.5.4
   carousel_slider: ^5.1.1
   google_mlkit_face_detection: ^0.13.1
   tflite_flutter: ^0.12.1

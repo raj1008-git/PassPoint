@@ -8,6 +8,7 @@ import 'package:signature/signature.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../../data/repositories/user_repository.dart';
 import '../../../data/repositories/visitor_repository.dart';
 import 'camera_capture.dart';
 
@@ -49,6 +50,38 @@ class _CheckInFormState extends State<CheckInForm> {
   String? _selectedDepartmentName;
   List<String> _peopleInDepartment = [];
   String? _selectedPerson;
+  bool _loadingPeople = false;
+  Future<List<String>> _loadPeopleInDepartment(String departmentId) async {
+    try {
+      final repo = UserRepository();
+      return await repo.getStaffNamesByDepartment(departmentId);
+    } catch (e) {
+      devLog(
+        'Error loading people in department',
+        params: {'error': e.toString()},
+      );
+      return [];
+    }
+  }
+
+  void _onDepartmentSelected(String departmentId, String departmentName) async {
+    setState(() {
+      _selectedDepartmentId = departmentId;
+      _selectedDepartmentName = departmentName;
+      _selectedPerson = null;
+      _peopleInDepartment = [];
+      _loadingPeople = true;
+    });
+
+    final people = await _loadPeopleInDepartment(departmentId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _peopleInDepartment = people;
+      _loadingPeople = false;
+    });
+  }
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 2,
@@ -770,20 +803,15 @@ class _CheckInFormState extends State<CheckInForm> {
                 final selDoc = docs.firstWhere((d) => d.id == val);
                 final data = selDoc.data() as Map<String, dynamic>;
                 final name = (data['name'] ?? val).toString();
-                final people = (data['people'] as List?)?.cast<String>() ?? [];
 
-                setState(() {
-                  _selectedDepartmentId = val;
-                  _selectedDepartmentName = name;
-                  _peopleInDepartment = people;
-                  _selectedPerson = null;
-                });
+                _onDepartmentSelected(val, name);
 
                 devLog(
                   'Department selected',
-                  params: {'id': val, 'name': name, 'people': people},
+                  params: {'id': val, 'name': name},
                 );
               },
+
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Select department';
                 return null;
@@ -815,11 +843,12 @@ class _CheckInFormState extends State<CheckInForm> {
         DropdownButtonFormField<String>(
           key: ValueKey('$_selectedDepartmentId-$_selectedPerson'),
           decoration: InputDecoration(
-            hintText: _selectedDepartmentId == null
-                ? 'Select department first'
+            hintText: _loadingPeople
+                ? 'Loading staff...'
                 : _peopleInDepartment.isEmpty
-                ? 'No people in department'
+                ? 'No staff in department'
                 : 'Select person',
+
             hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
             filled: true,
             fillColor: _selectedDepartmentId == null
@@ -834,7 +863,7 @@ class _CheckInFormState extends State<CheckInForm> {
               vertical: 14,
             ),
           ),
-          items: _peopleInDepartment.isEmpty
+          items: (_loadingPeople || _peopleInDepartment.isEmpty)
               ? null
               : _peopleInDepartment.map((person) {
                   return DropdownMenuItem<String>(
@@ -842,15 +871,19 @@ class _CheckInFormState extends State<CheckInForm> {
                     child: Text(person),
                   );
                 }).toList(),
+
           value: _selectedPerson,
           isExpanded: true,
           onChanged:
-              _selectedDepartmentId == null || _peopleInDepartment.isEmpty
+              (_selectedDepartmentId == null ||
+                  _loadingPeople ||
+                  _peopleInDepartment.isEmpty)
               ? null
               : (val) {
                   setState(() => _selectedPerson = val);
                   devLog('Person selected', params: {'person': val});
                 },
+
           validator: (v) {
             if (_selectedDepartmentId == null) return 'Select department first';
             if (v == null || v.isEmpty) return 'Select person to meet';

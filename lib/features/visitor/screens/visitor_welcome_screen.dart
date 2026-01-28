@@ -425,7 +425,6 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        // UPDATED - Two buttons side by side
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -446,20 +445,69 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
               color: AppTheme.textTertiary.withOpacity(0.3),
               margin: const EdgeInsets.symmetric(horizontal: 8),
             ),
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed('/staff-login'),
-              icon: const Icon(Icons.people_alt_outlined, size: 16),
-              label: const Text(
-                'Staff Dashboard',
-                style: TextStyle(fontSize: 13),
-              ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.textSecondary,
-              ),
-            ),
+            // TextButton.icon(
+            //   onPressed: () => Navigator.of(
+            //     context,
+            //   ).pushNamed('/staff-auth'), // FIXED - was '/staff-login'
+            //   icon: const Icon(Icons.people_alt_outlined, size: 16),
+            //   label: const Text(
+            //     'Staff Dashboard',
+            //     style: TextStyle(fontSize: 13),
+            //   ),
+            //   style: TextButton.styleFrom(
+            //     foregroundColor: AppTheme.textSecondary,
+            //   ),
+            // ),
           ],
         ),
       ],
     );
   }
+
+  // Widget _buildFooter(BuildContext context) {
+  //   return Column(
+  //     children: [
+  //       Text(
+  //         '© 2025 PassPoint. All rights reserved.',
+  //         style: AppTheme.bodySmall.copyWith(color: AppTheme.textTertiary),
+  //         textAlign: TextAlign.center,
+  //       ),
+  //       const SizedBox(height: 12),
+  //       // UPDATED - Two buttons side by side
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           TextButton.icon(
+  //             onPressed: () => _handleAdminAccess(context),
+  //             icon: const Icon(Icons.shield_outlined, size: 16),
+  //             label: const Text(
+  //               'Admin Dashboard',
+  //               style: TextStyle(fontSize: 13),
+  //             ),
+  //             style: TextButton.styleFrom(
+  //               foregroundColor: AppTheme.textSecondary,
+  //             ),
+  //           ),
+  //           Container(
+  //             width: 1,
+  //             height: 20,
+  //             color: AppTheme.textTertiary.withOpacity(0.3),
+  //             margin: const EdgeInsets.symmetric(horizontal: 8),
+  //           ),
+  //           TextButton.icon(
+  //             onPressed: () => Navigator.of(context).pushNamed('/staff-auth'),
+  //             icon: const Icon(Icons.people_alt_outlined, size: 16),
+  //             label: const Text(
+  //               'Staff Dashboard',
+  //               style: TextStyle(fontSize: 13),
+  //             ),
+  //             style: TextButton.styleFrom(
+  //               foregroundColor: AppTheme.textSecondary,
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 }
