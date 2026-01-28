@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/services/staff_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -203,229 +204,348 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
     };
   }
 
+  Future<bool> _onWillPop() async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppTheme.radiusMedium),
+        title: const Text('Confirm Exit'),
+        content: const Text('Are you sure you want to exit the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true) {
+      SystemNavigator.pop();
+    }
+
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: StreamBuilder<QuerySnapshot>(
-          stream: _visitorStream(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppTheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error: ${snapshot.error}', style: AppTheme.bodyLarge),
-                  ],
-                ),
-              );
-            }
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: AppTheme.background,
+        body: SafeArea(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _visitorStream(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppTheme.error,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error: ${snapshot.error}',
+                        style: AppTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                );
+              }
 
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            final docs = snapshot.data!.docs;
-            final stats = _calculateStats(docs);
+              final docs = snapshot.data!.docs;
+              final stats = _calculateStats(docs);
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final isTablet = constraints.maxWidth > 600;
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isTablet = constraints.maxWidth > 600;
 
-                return CustomScrollView(
-                  slivers: [
-                    // App Bar
-                    SliverToBoxAdapter(
-                      child: Container(
-                        color: AppTheme.white,
-                        padding: EdgeInsets.all(isTablet ? 24 : 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                IconButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.arrow_back),
-                                  color: AppTheme.dark,
-                                  tooltip: 'Back to Home',
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  width: isTablet ? 48 : 40,
-                                  height: isTablet ? 48 : 40,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.info,
-                                    borderRadius: AppTheme.radiusSmall,
+                  return CustomScrollView(
+                    slivers: [
+                      // App Bar
+                      SliverToBoxAdapter(
+                        child: Container(
+                          color: AppTheme.white,
+                          padding: EdgeInsets.all(isTablet ? 24 : 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: isTablet ? 48 : 40,
+                                    height: isTablet ? 48 : 40,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.info,
+                                      borderRadius: AppTheme.radiusSmall,
+                                    ),
+                                    child: Icon(
+                                      Icons.people_alt,
+                                      color: AppTheme.white,
+                                      size: isTablet ? 24 : 20,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.people_alt,
-                                    color: AppTheme.white,
-                                    size: isTablet ? 24 : 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Staff Dashboard',
-                                        style: isTablet
-                                            ? AppTheme.h2
-                                            : AppTheme.h3,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Welcome, ${_staffName ?? _staffEmail ?? "Staff"}',
-                                        style: AppTheme.bodySmall.copyWith(
-                                          color: AppTheme.textSecondary,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Staff Dashboard',
+                                          style: isTablet
+                                              ? AppTheme.h2
+                                              : AppTheme.h3,
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      shape: const RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(16),
-                                        ),
-                                      ),
-                                      builder: (context) {
-                                        return Container(
-                                          padding: const EdgeInsets.all(24),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Text(
-                                                'Export My Visitors',
-                                                style: AppTheme.h3,
-                                              ),
-                                              const SizedBox(height: 20),
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.table_chart,
-                                                  color: AppTheme.success,
-                                                ),
-                                                title: const Text(
-                                                  'Export as CSV',
-                                                ),
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                  _exportAllAsCsv(docs);
-                                                },
-                                              ),
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.code,
-                                                  color: AppTheme.info,
-                                                ),
-                                                title: const Text(
-                                                  'Export as JSON',
-                                                ),
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                  _exportAllAsJson(docs);
-                                                },
-                                              ),
-                                            ],
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Welcome, ${_staffName ?? _staffEmail ?? "Staff"}',
+                                          style: AppTheme.bodySmall.copyWith(
+                                            color: AppTheme.textSecondary,
                                           ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                  icon: const Icon(Icons.download, size: 18),
-                                  label: const Text('Export'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.dark,
-                                    side: const BorderSide(
-                                      color: AppTheme.greyLight,
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: isTablet ? 16 : 12,
-                                      vertical: 12,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _changePassword,
-                                  icon: const Icon(Icons.lock_reset, size: 18),
-                                  label: const Text('Change Password'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.info,
-                                    side: const BorderSide(
-                                      color: AppTheme.greyLight,
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: isTablet ? 16 : 12,
-                                      vertical: 12,
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16),
+                                          ),
+                                        ),
+                                        builder: (context) {
+                                          return Container(
+                                            padding: const EdgeInsets.all(24),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text(
+                                                  'Export My Visitors',
+                                                  style: AppTheme.h3,
+                                                ),
+                                                const SizedBox(height: 20),
+                                                ListTile(
+                                                  leading: const Icon(
+                                                    Icons.table_chart,
+                                                    color: AppTheme.success,
+                                                  ),
+                                                  title: const Text(
+                                                    'Export as CSV',
+                                                  ),
+                                                  onTap: () {
+                                                    Navigator.pop(context);
+                                                    _exportAllAsCsv(docs);
+                                                  },
+                                                ),
+                                                ListTile(
+                                                  leading: const Icon(
+                                                    Icons.code,
+                                                    color: AppTheme.info,
+                                                  ),
+                                                  title: const Text(
+                                                    'Export as JSON',
+                                                  ),
+                                                  onTap: () {
+                                                    Navigator.pop(context);
+                                                    _exportAllAsJson(docs);
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                    icon: const Icon(Icons.download, size: 18),
+                                    label: const Text('Export'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.dark,
+                                      side: const BorderSide(
+                                        color: AppTheme.greyLight,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _signOut,
-                                  icon: const Icon(Icons.logout, size: 18),
-                                  label: const Text('Logout'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.error,
-                                    side: const BorderSide(
-                                      color: AppTheme.greyLight,
+                                  OutlinedButton.icon(
+                                    onPressed: _changePassword,
+                                    icon: const Icon(
+                                      Icons.lock_reset,
+                                      size: 18,
                                     ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: isTablet ? 16 : 12,
-                                      vertical: 12,
+                                    label: const Text('Change Password'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.info,
+                                      side: const BorderSide(
+                                        color: AppTheme.greyLight,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  OutlinedButton.icon(
+                                    onPressed: _signOut,
+                                    icon: const Icon(Icons.logout, size: 18),
+                                    label: const Text('Logout'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.error,
+                                      side: const BorderSide(
+                                        color: AppTheme.greyLight,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Stats Cards - HORIZONTAL SCROLL IN PORTRAIT
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: isTablet ? 24 : 20,
-                        ),
-                        child: isTablet
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                ),
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
+                      // Stats Cards - HORIZONTAL SCROLL IN PORTRAIT
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: isTablet ? 24 : 20,
+                          ),
+                          child: isTablet
+                              ? Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 200,
+                                          child: StatCard(
+                                            icon: Icons.schedule,
+                                            title: 'Pending',
+                                            subtitle: 'Awaiting approval',
+                                            count: stats['pending']!,
+                                            backgroundColor:
+                                                AppTheme.pendingOrange,
+                                            iconColor:
+                                                AppTheme.pendingOrangeIcon,
+                                            borderColor:
+                                                AppTheme.pendingOrangeBorder,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        SizedBox(
+                                          width: 200,
+                                          child: StatCard(
+                                            icon: Icons.how_to_reg,
+                                            title: 'Checked In',
+                                            subtitle: 'Meeting you',
+                                            count: stats['checked_in']!,
+                                            backgroundColor:
+                                                AppTheme.checkedInGreen,
+                                            iconColor:
+                                                AppTheme.checkedInGreenIcon,
+                                            borderColor:
+                                                AppTheme.checkedInGreenBorder,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        SizedBox(
+                                          width: 200,
+                                          child: StatCard(
+                                            icon: Icons.exit_to_app,
+                                            title: 'Checked Out',
+                                            subtitle: 'Completed',
+                                            count: stats['checked_out']!,
+                                            backgroundColor:
+                                                AppTheme.checkedOutBlue,
+                                            iconColor:
+                                                AppTheme.checkedOutBlueIcon,
+                                            borderColor:
+                                                AppTheme.checkedOutBlueBorder,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        SizedBox(
+                                          width: 200,
+                                          child: StatCard(
+                                            icon: Icons.block,
+                                            title: 'Rejected',
+                                            subtitle: 'Denied',
+                                            count: stats['rejected']!,
+                                            backgroundColor:
+                                                AppTheme.rejectedRed,
+                                            iconColor: AppTheme.rejectedRedIcon,
+                                            borderColor:
+                                                AppTheme.rejectedRedBorder,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        SizedBox(
+                                          width: 200,
+                                          child: StatCard(
+                                            icon: Icons.trending_up,
+                                            title: 'Total',
+                                            subtitle: 'All visitors',
+                                            count: stats['total']!,
+                                            backgroundColor:
+                                                AppTheme.totalPurple,
+                                            iconColor: AppTheme.totalPurpleIcon,
+                                            borderColor:
+                                                AppTheme.totalPurpleBorder,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 24),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : SizedBox(
+                                  height: 140,
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                    ),
                                     children: [
                                       SizedBox(
-                                        width: 200,
+                                        width: 160,
                                         child: StatCard(
                                           icon: Icons.schedule,
                                           title: 'Pending',
-                                          subtitle: 'Awaiting approval',
+                                          subtitle: 'Awaiting',
                                           count: stats['pending']!,
                                           backgroundColor:
                                               AppTheme.pendingOrange,
@@ -434,13 +554,13 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                               AppTheme.pendingOrangeBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      const SizedBox(width: 12),
                                       SizedBox(
-                                        width: 200,
+                                        width: 160,
                                         child: StatCard(
                                           icon: Icons.how_to_reg,
                                           title: 'Checked In',
-                                          subtitle: 'Meeting you',
+                                          subtitle: 'Meeting',
                                           count: stats['checked_in']!,
                                           backgroundColor:
                                               AppTheme.checkedInGreen,
@@ -450,9 +570,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                               AppTheme.checkedInGreenBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      const SizedBox(width: 12),
                                       SizedBox(
-                                        width: 200,
+                                        width: 160,
                                         child: StatCard(
                                           icon: Icons.exit_to_app,
                                           title: 'Checked Out',
@@ -466,9 +586,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                               AppTheme.checkedOutBlueBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      const SizedBox(width: 12),
                                       SizedBox(
-                                        width: 200,
+                                        width: 160,
                                         child: StatCard(
                                           icon: Icons.block,
                                           title: 'Rejected',
@@ -480,9 +600,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                               AppTheme.rejectedRedBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
+                                      const SizedBox(width: 12),
                                       SizedBox(
-                                        width: 200,
+                                        width: 160,
                                         child: StatCard(
                                           icon: Icons.trending_up,
                                           title: 'Total',
@@ -494,206 +614,129 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                               AppTheme.totalPurpleBorder,
                                         ),
                                       ),
-                                      const SizedBox(width: 24),
+                                      const SizedBox(width: 20),
                                     ],
                                   ),
                                 ),
-                              )
-                            : SizedBox(
-                                height: 140,
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
+                        ),
+                      ),
+
+                      // Search Bar
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 24 : 20,
+                          ),
+                          child: TextField(
+                            controller: _searchCtrl,
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Search by name, phone, or department...',
+                              hintStyle: TextStyle(
+                                color: AppTheme.grey.withOpacity(0.5),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: AppTheme.grey,
+                              ),
+                              suffixIcon: _query.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchCtrl.clear();
+                                        setState(() => _query = '');
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: AppTheme.white,
+                              border: OutlineInputBorder(
+                                borderRadius: AppTheme.radiusMedium,
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                            onChanged: (v) => setState(() => _query = v),
+                          ),
+                        ),
+                      ),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+                      // Tabs and List
+                      SliverFillRemaining(
+                        child: Container(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 24 : 20,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.white,
+                            borderRadius: AppTheme.radiusLarge,
+                            boxShadow: AppTheme.cardShadow,
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: AppTheme.greyLight,
+                                      width: 1,
+                                    ),
                                   ),
-                                  children: [
-                                    SizedBox(
-                                      width: 160,
-                                      child: StatCard(
-                                        icon: Icons.schedule,
-                                        title: 'Pending',
-                                        subtitle: 'Awaiting',
-                                        count: stats['pending']!,
-                                        backgroundColor: AppTheme.pendingOrange,
-                                        iconColor: AppTheme.pendingOrangeIcon,
-                                        borderColor:
-                                            AppTheme.pendingOrangeBorder,
-                                      ),
+                                ),
+                                child: TabBar(
+                                  controller: _tabController,
+                                  isScrollable: !isTablet,
+                                  labelColor: AppTheme.dark,
+                                  unselectedLabelColor: AppTheme.grey,
+                                  labelStyle: AppTheme.labelLarge,
+                                  indicatorColor: AppTheme.info,
+                                  indicatorWeight: 3,
+                                  tabs: [
+                                    Tab(text: 'Pending (${stats['pending']})'),
+                                    Tab(
+                                      text:
+                                          'Checked In (${stats['checked_in']})',
                                     ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 160,
-                                      child: StatCard(
-                                        icon: Icons.how_to_reg,
-                                        title: 'Checked In',
-                                        subtitle: 'Meeting',
-                                        count: stats['checked_in']!,
-                                        backgroundColor:
-                                            AppTheme.checkedInGreen,
-                                        iconColor: AppTheme.checkedInGreenIcon,
-                                        borderColor:
-                                            AppTheme.checkedInGreenBorder,
-                                      ),
+                                    Tab(
+                                      text:
+                                          'Checked Out (${stats['checked_out']})',
                                     ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 160,
-                                      child: StatCard(
-                                        icon: Icons.exit_to_app,
-                                        title: 'Checked Out',
-                                        subtitle: 'Completed',
-                                        count: stats['checked_out']!,
-                                        backgroundColor:
-                                            AppTheme.checkedOutBlue,
-                                        iconColor: AppTheme.checkedOutBlueIcon,
-                                        borderColor:
-                                            AppTheme.checkedOutBlueBorder,
-                                      ),
+                                    Tab(
+                                      text: 'Rejected (${stats['rejected']})',
                                     ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 160,
-                                      child: StatCard(
-                                        icon: Icons.block,
-                                        title: 'Rejected',
-                                        subtitle: 'Denied',
-                                        count: stats['rejected']!,
-                                        backgroundColor: AppTheme.rejectedRed,
-                                        iconColor: AppTheme.rejectedRedIcon,
-                                        borderColor: AppTheme.rejectedRedBorder,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 160,
-                                      child: StatCard(
-                                        icon: Icons.trending_up,
-                                        title: 'Total',
-                                        subtitle: 'All visitors',
-                                        count: stats['total']!,
-                                        backgroundColor: AppTheme.totalPurple,
-                                        iconColor: AppTheme.totalPurpleIcon,
-                                        borderColor: AppTheme.totalPurpleBorder,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 20),
+                                    Tab(text: 'All (${stats['total']})'),
                                   ],
                                 ),
                               ),
-                      ),
-                    ),
-
-                    // Search Bar
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isTablet ? 24 : 20,
-                        ),
-                        child: TextField(
-                          controller: _searchCtrl,
-                          decoration: InputDecoration(
-                            hintText: 'Search by name, phone, or department...',
-                            hintStyle: TextStyle(
-                              color: AppTheme.grey.withOpacity(0.5),
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.search,
-                              color: AppTheme.grey,
-                            ),
-                            suffixIcon: _query.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(() => _query = '');
-                                    },
-                                  )
-                                : null,
-                            filled: true,
-                            fillColor: AppTheme.white,
-                            border: OutlineInputBorder(
-                              borderRadius: AppTheme.radiusMedium,
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                          ),
-                          onChanged: (v) => setState(() => _query = v),
-                        ),
-                      ),
-                    ),
-
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                    // Tabs and List
-                    SliverFillRemaining(
-                      child: Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isTablet ? 24 : 20,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.white,
-                          borderRadius: AppTheme.radiusLarge,
-                          boxShadow: AppTheme.cardShadow,
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: AppTheme.greyLight,
-                                    width: 1,
-                                  ),
+                              Expanded(
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    _buildList(context, docs, 'pending'),
+                                    _buildList(context, docs, 'checked_in'),
+                                    _buildList(context, docs, 'checked_out'),
+                                    _buildList(context, docs, 'rejected'),
+                                    _buildList(context, docs, 'all'),
+                                  ],
                                 ),
                               ),
-                              child: TabBar(
-                                controller: _tabController,
-                                isScrollable: !isTablet,
-                                labelColor: AppTheme.dark,
-                                unselectedLabelColor: AppTheme.grey,
-                                labelStyle: AppTheme.labelLarge,
-                                indicatorColor: AppTheme.info,
-                                indicatorWeight: 3,
-                                tabs: [
-                                  Tab(text: 'Pending (${stats['pending']})'),
-                                  Tab(
-                                    text: 'Checked In (${stats['checked_in']})',
-                                  ),
-                                  Tab(
-                                    text:
-                                        'Checked Out (${stats['checked_out']})',
-                                  ),
-                                  Tab(text: 'Rejected (${stats['rejected']})'),
-                                  Tab(text: 'All (${stats['total']})'),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildList(context, docs, 'pending'),
-                                  _buildList(context, docs, 'checked_in'),
-                                  _buildList(context, docs, 'checked_out'),
-                                  _buildList(context, docs, 'rejected'),
-                                  _buildList(context, docs, 'all'),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  ],
-                );
-              },
-            );
-          },
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
