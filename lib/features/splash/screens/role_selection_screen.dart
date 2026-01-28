@@ -12,7 +12,7 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 
   void _handleStaffAccess(BuildContext context) {
-    devLog('Prabhu Staff button pressed');
+    devLog('PMLIL Staff button pressed');
     Navigator.of(context).pushNamed('/staff-auth');
   }
 
@@ -93,7 +93,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
-                                title: 'Prabhu Staff',
+                                title: 'PMLIL Staff',
                                 subtitle: 'View your visitor requests',
                                 icon: Icons.people_alt,
                                 gradient: LinearGradient(
@@ -133,7 +133,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             SizedBox(height: isTablet ? 24 : 20),
                             _buildRoleCard(
                               context: context,
-                              title: 'Prabhu Staff',
+                              title: 'PMLIL Staff',
                               subtitle: 'View your visitor requests',
                               icon: Icons.people_alt,
                               gradient: LinearGradient(

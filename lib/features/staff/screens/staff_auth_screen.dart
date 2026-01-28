@@ -97,7 +97,7 @@ class _StaffAuthScreenState extends State<StaffAuthScreen>
                               const SizedBox(height: 24),
 
                               // Title
-                              const Text('Prabhu Staff', style: AppTheme.h2),
+                              const Text('PMLIL Staff', style: AppTheme.h2),
 
                               const SizedBox(height: 8),
 
