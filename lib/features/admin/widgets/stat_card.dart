@@ -24,59 +24,80 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: AppTheme.radiusMedium,
-        border: Border.all(color: borderColor.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 200;
+
+        return Container(
+          padding: EdgeInsets.all(isCompact ? 12 : 20),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: AppTheme.radiusMedium,
+            border: Border.all(color: borderColor.withOpacity(0.3), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
-                  borderRadius: AppTheme.radiusSmall,
-                ),
-                child: Icon(icon, color: iconColor, size: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: isCompact ? 40 : 48,
+                    height: isCompact ? 40 : 48,
+                    decoration: BoxDecoration(
+                      color: iconColor.withOpacity(0.15),
+                      borderRadius: AppTheme.radiusSmall,
+                    ),
+                    child: Icon(
+                      icon,
+                      color: iconColor,
+                      size: isCompact ? 20 : 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            count.toString(),
+                            style: AppTheme.h2.copyWith(
+                              color: iconColor,
+                              fontSize: isCompact ? 24 : 28,
+                            ),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: AppTheme.labelLarge.copyWith(
+                  fontSize: isCompact ? 14 : 15,
+                  color: AppTheme.dark,
                 ),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondary,
                 ),
-                child: Text(
-                  count.toString(),
-                  style: AppTheme.h2.copyWith(color: iconColor, fontSize: 28),
-                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: AppTheme.labelLarge.copyWith(
-              fontSize: 15,
-              color: AppTheme.dark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondary),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

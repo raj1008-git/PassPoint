@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/services/auth_service.dart';
 import '../../../core/services/pin_service.dart';
+import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../admin/screens/admin_dashboard_screen.dart';
@@ -63,7 +63,7 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
 
   Future<void> _handleAdminAccess(BuildContext context) async {
     devLog('Admin button pressed');
-    final isLoggedIn = await AuthService.isLoggedIn();
+    final isLoggedIn = await ReceptionistAuthService.isLoggedIn();
 
     if (!context.mounted) return;
 

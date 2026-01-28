@@ -36,6 +36,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Branding
                       _buildBranding(isTablet),
@@ -111,6 +112,7 @@ class RoleSelectionScreen extends StatelessWidget {
                         )
                       else
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _buildRoleCard(
                               context: context,
@@ -171,6 +173,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
   Widget _buildBranding(bool isTablet) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: isTablet ? 96 : 80,
@@ -282,6 +285,7 @@ class RoleSelectionScreen extends StatelessWidget {
           ),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Icon with gradient background
             Container(
@@ -344,6 +348,7 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Tap to Continue',
