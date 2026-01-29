@@ -2,13 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:signature/signature.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/product_repository.dart';
-import '../bloc/product_bloc.dart';
-import '../bloc/product_event.dart';
 import '../model/product_model.dart';
 
 class CompleteProductDialog extends StatefulWidget {
@@ -85,18 +82,17 @@ class _CompleteProductDialogState extends State<CompleteProductDialog> {
       final repo = ProductRepository();
       final signatureUrl = await repo.uploadSignature(tempFile);
 
-      // Complete product
-      if (mounted) {
-        context.read<ProductBloc>().add(
-          CompleteProduct(
-            productId: widget.product.id,
-            staffName: widget.staffName,
-            department: widget.department,
-            feedback: _feedbackCtrl.text.trim(),
-            signatureUrl: signatureUrl,
-          ),
-        );
+      // Complete product directly via repository (no Bloc needed in dialog)
+      await repo.completeProduct(
+        productId: widget.product.id,
+        staffName: widget.staffName,
+        department: widget.department,
+        feedback: _feedbackCtrl.text.trim(),
+        signatureUrl: signatureUrl,
+      );
 
+      // Success - close dialog
+      if (mounted) {
         Navigator.of(context).pop(true);
       }
     } catch (e) {

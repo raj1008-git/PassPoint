@@ -172,7 +172,7 @@ class _ProductCheckInScreenState extends State<ProductCheckInScreen> {
               children: [
                 Icon(Icons.check_circle, color: AppTheme.success, size: 32),
                 SizedBox(width: 12),
-                Text('Submitted Successfully'),
+                Text('Submitted'),
               ],
             ),
             content: Column(

@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/user_repository.dart';
-import '../bloc/product_bloc.dart';
-import '../bloc/product_event.dart';
 import '../model/product_model.dart';
 
 class ForwardProductDialog extends StatefulWidget {
@@ -40,6 +38,8 @@ class _ForwardProductDialogState extends State<ForwardProductDialog> {
   }
 
   Future<void> _onDepartmentSelected(String deptId, String deptName) async {
+    print('DEBUG: Department selected: $deptName ($deptId)');
+
     setState(() {
       _selectedDepartmentId = deptId;
       _selectedDepartmentName = deptName;
@@ -50,15 +50,19 @@ class _ForwardProductDialogState extends State<ForwardProductDialog> {
 
     try {
       final repo = UserRepository();
+      print('DEBUG: Fetching staff for department: $deptId');
       final people = await repo.getStaffNamesByDepartment(deptId);
+      print('DEBUG: Fetched ${people.length} people: $people');
 
       if (mounted) {
         setState(() {
           _peopleInDepartment = people;
           _loadingPeople = false;
         });
+        print('DEBUG: State updated with ${_peopleInDepartment.length} people');
       }
     } catch (e) {
+      print('DEBUG: Error loading people: $e');
       if (mounted) {
         setState(() => _loadingPeople = false);
       }
@@ -99,19 +103,22 @@ class _ForwardProductDialogState extends State<ForwardProductDialog> {
     setState(() => _isSubmitting = true);
 
     try {
-      context.read<ProductBloc>().add(
-        ForwardProduct(
-          productId: widget.product.id,
-          fromStaffName: widget.currentStaffName,
-          fromDepartment: widget.currentDepartment,
-          toDepartmentId: _selectedDepartmentId!,
-          toDepartmentName: _selectedDepartmentName!,
-          toPersonName: _selectedPersonName!,
-          feedback: _feedbackCtrl.text.trim(),
-        ),
+      // Forward product directly via repository (no Bloc needed in dialog)
+      final repo = ProductRepository();
+      await repo.forwardProduct(
+        productId: widget.product.id,
+        fromStaffName: widget.currentStaffName,
+        fromDepartment: widget.currentDepartment,
+        toDepartmentId: _selectedDepartmentId!,
+        toDepartmentName: _selectedDepartmentName!,
+        toPersonName: _selectedPersonName!,
+        feedback: _feedbackCtrl.text.trim(),
       );
 
-      Navigator.of(context).pop(true);
+      // Success - close dialog
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -366,6 +373,12 @@ class _ForwardProductDialogState extends State<ForwardProductDialog> {
   }
 
   Widget _buildPersonField() {
+    // Debug: Print the state
+    print('DEBUG: _selectedDepartmentId = $_selectedDepartmentId');
+    print('DEBUG: _loadingPeople = $_loadingPeople');
+    print('DEBUG: _peopleInDepartment = $_peopleInDepartment');
+    print('DEBUG: _peopleInDepartment.length = ${_peopleInDepartment.length}');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -379,31 +392,39 @@ class _ForwardProductDialogState extends State<ForwardProductDialog> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          key: ValueKey(
+            '$_selectedDepartmentId-${_peopleInDepartment.length}',
+          ), // Force rebuild
           decoration: InputDecoration(
             hintText: _loadingPeople
                 ? 'Loading staff...'
-                : _peopleInDepartment.isEmpty
+                : _selectedDepartmentId == null
                 ? 'Select department first'
+                : _peopleInDepartment.isEmpty
+                ? 'No staff in this department'
                 : 'Select person',
             filled: true,
-            fillColor: _selectedDepartmentId == null
-                ? AppTheme.greyLight.withOpacity(0.3)
-                : AppTheme.greyLight.withOpacity(0.5),
+            fillColor: AppTheme.greyLight.withOpacity(0.5),
             border: OutlineInputBorder(
               borderRadius: AppTheme.radiusSmall,
               borderSide: BorderSide.none,
             ),
           ),
           value: _selectedPersonName,
-          items: _peopleInDepartment.map((person) {
-            return DropdownMenuItem<String>(value: person, child: Text(person));
-          }).toList(),
-          onChanged:
-              (_selectedDepartmentId == null ||
-                  _loadingPeople ||
-                  _peopleInDepartment.isEmpty)
+          items: _peopleInDepartment.isEmpty
+              ? []
+              : _peopleInDepartment.map((person) {
+                  return DropdownMenuItem<String>(
+                    value: person,
+                    child: Text(person),
+                  );
+                }).toList(),
+          onChanged: (_loadingPeople || _peopleInDepartment.isEmpty)
               ? null
-              : (val) => setState(() => _selectedPersonName = val),
+              : (val) {
+                  print('DEBUG: Selected person = $val');
+                  setState(() => _selectedPersonName = val);
+                },
         ),
       ],
     );
