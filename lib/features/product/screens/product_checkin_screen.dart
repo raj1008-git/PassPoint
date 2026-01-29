@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -84,7 +85,10 @@ class _ProductCheckInScreenState extends State<ProductCheckInScreen> {
 
   Future<void> _capturePhoto() async {
     final file = await Navigator.of(context).push<File?>(
-      MaterialPageRoute(builder: (_) => const CameraCaptureScreen()),
+      MaterialPageRoute(
+        builder: (_) =>
+            const CameraCaptureScreen(preferredLens: CameraLensDirection.back),
+      ),
     );
     if (file != null) {
       setState(() => _productPhoto = file);

@@ -7,11 +7,16 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 
 class CameraCaptureScreen extends StatefulWidget {
-  final bool isFaceScanning; // NEW - flag for face scanning mode
+  final bool isFaceScanning;
+
+  /// NEW — allows choosing front/back camera safely
+  final CameraLensDirection preferredLens;
 
   const CameraCaptureScreen({
     super.key,
-    this.isFaceScanning = false, // NEW
+    this.isFaceScanning = false,
+    this.preferredLens =
+        CameraLensDirection.front, // DEFAULT = existing behavior
   });
 
   @override
@@ -34,18 +39,23 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       _cameras = await availableCameras();
 
       if (_cameras != null && _cameras!.isNotEmpty) {
-        final CameraDescription frontCamera = _cameras!.firstWhere(
-              (camera) => camera.lensDirection == CameraLensDirection.front,
+        /// ✅ UPDATED — camera selection now configurable
+        final CameraDescription selectedCamera = _cameras!.firstWhere(
+          (camera) => camera.lensDirection == widget.preferredLens,
           orElse: () => _cameras!.first,
         );
+
         _controller = CameraController(
-          frontCamera,
+          selectedCamera,
           ResolutionPreset.medium,
           enableAudio: false,
         );
 
         await _controller!.initialize();
-        devLog('Camera initialized');
+        devLog(
+          'Camera initialized',
+          params: {'lens': selectedCamera.lensDirection.name},
+        );
       } else {
         devLog('No Cameras Found');
       }
@@ -149,7 +159,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Camera Preview
           Center(
             child: AspectRatio(
               aspectRatio: _controller!.value.aspectRatio,
@@ -157,7 +166,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
             ),
           ),
 
-          // Overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -173,7 +181,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
             ),
           ),
 
-          // Top Bar
           Positioned(
             top: 0,
             left: 0,
@@ -205,7 +212,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        // NEW - Different instruction based on mode
                         widget.isFaceScanning
                             ? 'Look at the camera for face scan'
                             : 'Position your face in the frame',
@@ -222,14 +228,12 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
             ),
           ),
 
-          // Face Guide Frame
           Center(
             child: Container(
               width: 250,
               height: 300,
               decoration: BoxDecoration(
                 border: Border.all(
-                  // NEW - Different color for scanning
                   color: widget.isFaceScanning
                       ? AppTheme.info.withOpacity(0.7)
                       : AppTheme.white.withOpacity(0.5),
@@ -240,7 +244,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
             ),
           ),
 
-          // Bottom Controls
           Positioned(
             bottom: 0,
             left: 0,
@@ -250,7 +253,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   children: [
-                    // Instructions
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -264,7 +266,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            // NEW - Different icon
                             widget.isFaceScanning
                                 ? Icons.face_retouching_natural
                                 : Icons.info_outline,
@@ -274,7 +275,6 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              // NEW - Different message
                               widget.isFaceScanning
                                   ? 'Scanning for existing visitor'
                                   : 'Make sure your face is clearly visible',
@@ -286,27 +286,22 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 32),
-
-                    // Capture Button
-                    Center(
-                      child: GestureDetector(
-                        onTap: _takePicture,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.white, width: 4),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: AppTheme.white,
-                                shape: BoxShape.circle,
-                              ),
+                    GestureDetector(
+                      onTap: _takePicture,
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.white, width: 4),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: AppTheme.white,
+                              shape: BoxShape.circle,
                             ),
                           ),
                         ),

@@ -140,32 +140,32 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           child: Column(
             children: [
               // Info Banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                color: AppTheme.info.withOpacity(0.1),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: AppTheme.info,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Showing products assigned to: ${widget.staffName}',
-                        style: AppTheme.bodySmall.copyWith(
-                          color: AppTheme.info,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   width: double.infinity,
+              //   padding: const EdgeInsets.symmetric(
+              //     horizontal: 16,
+              //     vertical: 8,
+              //   ),
+              //   color: AppTheme.info.withOpacity(0.1),
+              //   child: Row(
+              //     children: [
+              //       const Icon(
+              //         Icons.info_outline,
+              //         size: 16,
+              //         color: AppTheme.info,
+              //       ),
+              //       const SizedBox(width: 8),
+              //       Expanded(
+              //         child: Text(
+              //           'Showing products assigned to: ${widget.staffName}',
+              //           style: AppTheme.bodySmall.copyWith(
+              //             color: AppTheme.info,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
 
               // Search Bar
               Padding(
