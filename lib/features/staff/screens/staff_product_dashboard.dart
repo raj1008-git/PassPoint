@@ -63,14 +63,22 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     return filtered;
   }
 
-  Future<void> _forwardProduct(ProductModel product) async {
+  Future<void> _forwardProduct(
+    BuildContext context,
+    ProductModel product,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => ForwardProductDialog(
-        product: product,
-        currentStaffName: widget.staffName,
-        currentDepartment: widget.department,
-      ),
+      builder: (ctx) {
+        return BlocProvider.value(
+          value: BlocProvider.of<ProductBloc>(context),
+          child: ForwardProductDialog(
+            product: product,
+            currentStaffName: widget.staffName,
+            currentDepartment: widget.department,
+          ),
+        );
+      },
     );
 
     if (result == true && mounted) {
@@ -83,15 +91,23 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     }
   }
 
-  Future<void> _completeProduct(ProductModel product) async {
+  Future<void> _completeProduct(
+    BuildContext context,
+    ProductModel product,
+  ) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => CompleteProductDialog(
-        product: product,
-        staffName: widget.staffName,
-        department: widget.department,
-        isReceptionist: false,
-      ),
+      builder: (ctx) {
+        return BlocProvider.value(
+          value: BlocProvider.of<ProductBloc>(context),
+          child: CompleteProductDialog(
+            product: product,
+            staffName: widget.staffName,
+            department: widget.department,
+            isReceptionist: false,
+          ),
+        );
+      },
     );
 
     if (result == true && mounted) {
@@ -223,11 +239,18 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
             controller: _tabController,
             children: [
               _buildProductList(
+                context,
                 _filterProducts(products, 'received_by_reception'),
               ),
-              _buildProductList(_filterProducts(products, 'forwarded')),
-              _buildProductList(_filterProducts(products, 'completed')),
-              _buildProductList(_filterProducts(products, 'all')),
+              _buildProductList(
+                context,
+                _filterProducts(products, 'forwarded'),
+              ),
+              _buildProductList(
+                context,
+                _filterProducts(products, 'completed'),
+              ),
+              _buildProductList(context, _filterProducts(products, 'all')),
             ],
           );
         },
@@ -235,7 +258,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     );
   }
 
-  Widget _buildProductList(List<ProductModel> products) {
+  Widget _buildProductList(BuildContext context, List<ProductModel> products) {
     if (products.isEmpty) {
       return Center(
         child: Column(
@@ -271,14 +294,14 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 builder: (_) => ProductDetailsDialog(product: product),
               );
             },
-            actionButton: _buildActionButtons(product),
+            actionButton: _buildActionButtons(context, product),
           ),
         );
       },
     );
   }
 
-  Widget? _buildActionButtons(ProductModel product) {
+  Widget? _buildActionButtons(BuildContext context, ProductModel product) {
     // Can't take action on completed products
     if (product.currentStatus == 'completed') {
       return null;
@@ -291,7 +314,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _forwardProduct(product),
+                onPressed: () => _forwardProduct(context, product),
                 icon: const Icon(Icons.forward, size: 18),
                 label: const Text('Forward'),
                 style: OutlinedButton.styleFrom(
@@ -304,7 +327,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
             const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _completeProduct(product),
+                onPressed: () => _completeProduct(context, product),
                 icon: const Icon(Icons.done_all, size: 18),
                 label: const Text('Complete'),
                 style: ElevatedButton.styleFrom(

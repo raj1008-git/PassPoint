@@ -191,7 +191,7 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // Status Badge - UPDATED WITH REJECTED STATUS
+        // Status Badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
@@ -226,7 +226,7 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // Action Buttons - UPDATED WITH REJECT BUTTON
+        // Action Buttons
         if (status == 'pending') ...[
           SizedBox(
             width: double.infinity,
@@ -249,13 +249,11 @@ class VisitorLogTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // NEW - Reject Button
           SizedBox(
             width: double.infinity,
             height: 48,
             child: OutlinedButton.icon(
               onPressed: () async {
-                // Show confirmation dialog
                 final confirm = await showDialog<bool>(
                   context: dialogContext,
                   builder: (ctx) => AlertDialog(
@@ -321,7 +319,6 @@ class VisitorLogTile extends StatelessWidget {
               ),
             ),
           ),
-        // NEW - Info for rejected status
         if (status == 'rejected')
           Container(
             padding: const EdgeInsets.all(16),
@@ -371,7 +368,6 @@ class VisitorLogTile extends StatelessWidget {
         const Text('Visitor Details', style: AppTheme.h3),
         const SizedBox(height: 24),
 
-        // Personal Information
         _buildSectionHeader(Icons.person, 'Personal Information'),
         const SizedBox(height: 12),
         _buildInfoCard([
@@ -382,7 +378,6 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // Visit Information
         _buildSectionHeader(Icons.business, 'Visit Information'),
         const SizedBox(height: 12),
         _buildInfoCard([
@@ -393,7 +388,6 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // Timeline
         _buildSectionHeader(Icons.schedule, 'Timeline'),
         const SizedBox(height: 12),
         Container(
@@ -425,7 +419,6 @@ class VisitorLogTile extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // Signature Section
         if (signatureUrl.isNotEmpty) ...[
           _buildSectionHeader(Icons.draw, 'Signature'),
           const SizedBox(height: 12),
@@ -463,7 +456,6 @@ class VisitorLogTile extends StatelessWidget {
           const SizedBox(height: 20),
         ],
 
-        // Contact Department Box
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -648,118 +640,114 @@ class VisitorLogTile extends StatelessWidget {
           borderRadius: AppTheme.radiusMedium,
           border: Border.all(color: AppTheme.greyLight, width: 1),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Photo
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppTheme.greyLight,
-                borderRadius: AppTheme.radiusSmall,
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: photoUrl.isNotEmpty
-                  ? Image.network(
-                      photoUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(
-                            child: Icon(
-                              Icons.person_outline,
-                              size: 32,
-                              color: AppTheme.grey,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Photo
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppTheme.greyLight,
+                    borderRadius: AppTheme.radiusSmall,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: photoUrl.isNotEmpty
+                      ? Image.network(
+                          photoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(
+                                child: Icon(
+                                  Icons.person_outline,
+                                  size: 32,
+                                  color: AppTheme.grey,
+                                ),
+                              ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.person_outline,
+                            size: 32,
+                            color: AppTheme.grey,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 16),
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: AppTheme.labelLarge.copyWith(fontSize: 16),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.person_outline,
-                        size: 32,
-                        color: AppTheme.grey,
-                      ),
-                    ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: AppTheme.labelLarge.copyWith(fontSize: 16),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // UPDATED - Status Badge with Rejected
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: status == 'pending'
-                              ? AppTheme.warning.withOpacity(0.15)
-                              : status == 'checked_in'
-                              ? AppTheme.success.withOpacity(0.15)
-                              : status == 'rejected'
-                              ? AppTheme.error.withOpacity(0.15)
-                              : AppTheme.grey.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          status == 'pending'
-                              ? 'Pending'
-                              : status == 'checked_in'
-                              ? 'Checked In'
-                              : status == 'rejected'
-                              ? 'Rejected'
-                              : 'Checked Out',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: status == 'pending'
-                                ? AppTheme.warning
-                                : status == 'checked_in'
-                                ? AppTheme.success
-                                : status == 'rejected'
-                                ? AppTheme.error
-                                : AppTheme.grey,
-                            fontWeight: FontWeight.w600,
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: status == 'pending'
+                                  ? AppTheme.warning.withOpacity(0.15)
+                                  : status == 'checked_in'
+                                  ? AppTheme.success.withOpacity(0.15)
+                                  : status == 'rejected'
+                                  ? AppTheme.error.withOpacity(0.15)
+                                  : AppTheme.grey.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              status == 'pending'
+                                  ? 'Pending'
+                                  : status == 'checked_in'
+                                  ? 'Checked In'
+                                  : status == 'rejected'
+                                  ? 'Rejected'
+                                  : 'Checked Out',
+                              style: AppTheme.bodySmall.copyWith(
+                                color: status == 'pending'
+                                    ? AppTheme.warning
+                                    : status == 'checked_in'
+                                    ? AppTheme.success
+                                    : status == 'rejected'
+                                    ? AppTheme.error
+                                    : AppTheme.grey,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Department: $deptName',
-                    style: AppTheme.bodySmall.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Meeting: $toMeet',
-                          style: AppTheme.bodySmall.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 6),
+                      Text(
+                        'Department: $deptName',
+                        style: AppTheme.bodySmall.copyWith(
+                          color: AppTheme.textSecondary,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        'Meeting: $toMeet',
+                        style: AppTheme.bodySmall.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 4),
                       Text(
                         'Phone: $phone',
                         style: AppTheme.bodySmall.copyWith(
@@ -768,123 +756,82 @@ class VisitorLogTile extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Time and Action - UPDATED WITH REJECT BUTTON
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  _fmt(checkInTime).split(' ')[0],
-                  style: AppTheme.bodySmall.copyWith(
-                    color: AppTheme.textTertiary,
-                  ),
                 ),
-                Text(
-                  _fmt(checkInTime).split(' ').skip(1).join(' '),
-                  style: AppTheme.bodySmall.copyWith(
-                    color: AppTheme.textTertiary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (status == 'pending')
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Reject Button
-                      ElevatedButton(
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Reject Visitor'),
-                              content: const Text(
-                                'Are you sure you want to reject this visitor request?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: AppTheme.error,
-                                  ),
-                                  child: const Text('Reject'),
-                                ),
-                              ],
-                            ),
-                          );
-
-                          if (confirm == true) {
-                            await _updateStatus(id, {'status': 'rejected'});
-                            devLog('Visitor rejected', params: {'id': id});
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.error,
-                          foregroundColor: AppTheme.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          minimumSize: Size.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.block, size: 16),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Reject',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Check In Button
-                      ElevatedButton(
-                        onPressed: () async {
-                          await _updateStatus(id, {'status': 'checked_in'});
-                          devLog('Visitor checked in', params: {'id': id});
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.success,
-                          foregroundColor: AppTheme.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          minimumSize: Size.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.check, size: 16),
-                            const SizedBox(width: 4),
-                            const Text(
-                              'Check In',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
               ],
             ),
+            // Action Buttons
+            if (status == 'pending') ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Reject Visitor'),
+                          content: const Text(
+                            'Are you sure you want to reject this visitor request?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppTheme.error,
+                              ),
+                              child: const Text('Reject'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await _updateStatus(id, {'status': 'rejected'});
+                        devLog('Visitor rejected', params: {'id': id});
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.error,
+                      foregroundColor: AppTheme.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppTheme.radiusSmall,
+                      ),
+                    ),
+                    icon: const Icon(Icons.block, size: 16),
+                    label: const Text('Reject'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      await _updateStatus(id, {'status': 'checked_in'});
+                      devLog('Visitor checked in', params: {'id': id});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: AppTheme.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppTheme.radiusSmall,
+                      ),
+                    ),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Check In'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
