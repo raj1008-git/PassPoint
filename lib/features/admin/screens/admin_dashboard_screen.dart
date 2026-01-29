@@ -780,12 +780,16 @@
 // }
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pass_point/features/admin/screens/receptionist_product_dashboard.dart';
 import 'package:pass_point/features/admin/screens/staff_approval_screen.dart';
 
 import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../export/utils/file_writer.dart';
+import '../../product/bloc/product_bloc.dart';
+import '../../product/bloc/product_event.dart';
 import '../widgets/receptionist_change_password_dialog.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/visitor_log_tile.dart';
@@ -1176,6 +1180,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   label: const Text('Approvals'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppTheme.info,
+                                    side: const BorderSide(
+                                      color: AppTheme.greyLight,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 16 : 12,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => BlocProvider(
+                                          create: (_) =>
+                                              ProductBloc()
+                                                ..add(LoadAllProducts()),
+                                          child: const ReceptionistProductDashboard(
+                                            receptionistName:
+                                                'Receptionist', // Simple default
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.inventory_2, size: 18),
+                                  label: const Text('Products'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.success,
                                     side: const BorderSide(
                                       color: AppTheme.greyLight,
                                     ),

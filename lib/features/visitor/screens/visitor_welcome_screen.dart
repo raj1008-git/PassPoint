@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../admin/screens/admin_dashboard_screen.dart';
 import '../../admin/widgets/pin_dialog.dart';
+import '../../product/screens/product_checkin_screen.dart';
 import '../widgets/carousel_section.dart';
 import 'checkin_screen.dart';
 
@@ -368,7 +369,7 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
         ),
         SizedBox(height: compact ? 8 : 12),
         Text(
-          'Please check in to notify your host',
+          'Please select check-in type',
           style: TextStyle(
             fontSize: compact ? 14 : 16,
             color: AppTheme.textSecondary,
@@ -378,7 +379,7 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
 
         SizedBox(height: compact ? 24 : 40),
 
-        // Check In Button
+        // Visitor Check In Button
         SizedBox(
           width: double.infinity,
           height: compact ? 52 : 64,
@@ -399,7 +400,49 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
                 Icon(Icons.login, size: compact ? 22 : 28),
                 SizedBox(width: compact ? 12 : 16),
                 Text(
-                  'Check In Now',
+                  'Visitor Check In',
+                  style: TextStyle(
+                    fontSize: compact ? 16 : 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(width: compact ? 8 : 12),
+                Icon(Icons.arrow_forward_rounded, size: compact ? 20 : 24),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Product Check In Button (NEW!)
+        SizedBox(
+          width: double.infinity,
+          height: compact ? 52 : 64,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProductCheckInScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.info,
+              foregroundColor: AppTheme.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(compact ? 14 : 16),
+              ),
+              elevation: 8,
+              shadowColor: AppTheme.info.withOpacity(0.4),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2, size: compact ? 22 : 28),
+                SizedBox(width: compact ? 12 : 16),
+                Text(
+                  'Product Check In',
                   style: TextStyle(
                     fontSize: compact ? 16 : 20,
                     fontWeight: FontWeight.bold,

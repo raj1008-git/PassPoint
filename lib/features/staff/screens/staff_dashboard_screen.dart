@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pass_point/features/staff/screens/staff_product_dashboard.dart';
 
 import '../../../core/services/staff_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,6 +11,8 @@ import '../../../core/utils/dev.log.dart';
 import '../../admin/widgets/stat_card.dart';
 import '../../admin/widgets/visitor_log_tile.dart';
 import '../../export/utils/file_writer.dart';
+import '../../product/bloc/product_bloc.dart';
+import '../../product/bloc/product_event.dart';
 import '../widgets/change_password_dialog.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
@@ -404,6 +409,78 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                     label: const Text('Change Password'),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppTheme.info,
+                                      side: const BorderSide(
+                                        color: AppTheme.greyLight,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      // Fetch staff info from Firestore
+                                      final userId = FirebaseAuth
+                                          .instance
+                                          .currentUser
+                                          ?.uid;
+                                      if (userId == null) return;
+
+                                      try {
+                                        final userDoc = await FirebaseFirestore
+                                            .instance
+                                            .collection('users')
+                                            .doc(userId)
+                                            .get();
+
+                                        final staffName =
+                                            userDoc.data()?['name'] ??
+                                            'Staff Member';
+                                        final department =
+                                            userDoc.data()?['departmentName'] ??
+                                            'General';
+
+                                        if (mounted) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => BlocProvider(
+                                                create: (_) => ProductBloc()
+                                                  ..add(
+                                                    LoadStaffProducts(
+                                                      staffName,
+                                                    ),
+                                                  ),
+                                                child: StaffProductDashboard(
+                                                  staffName: staffName,
+                                                  department: department,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Error loading staff info: $e',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.inventory_2,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Products'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.success,
                                       side: const BorderSide(
                                         color: AppTheme.greyLight,
                                       ),
