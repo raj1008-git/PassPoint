@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/services/product_export_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_event.dart';
@@ -120,6 +121,61 @@ class _ReceptionistProductDashboardState
     }
   }
 
+  Future<void> _exportProducts(List<ProductModel> products) async {
+    try {
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Exporting products...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      // Export all products using existing static method
+      final path = await ProductExportService.exportAllProducts();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported ${products.length} products to:\n$path'),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppTheme.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,6 +191,28 @@ class _ReceptionistProductDashboardState
           'Product Management',
           style: TextStyle(color: AppTheme.dark),
         ),
+        actions: [
+          // Export CSV Button
+          BlocBuilder<ProductBloc, ProductState>(
+            builder: (context, state) {
+              final products = (state is ProductLoaded)
+                  ? state.products
+                  : (state is ProductOperationInProgress)
+                  ? state.products
+                  : (state is ProductOperationSuccess)
+                  ? state.products
+                  : <ProductModel>[];
+
+              return IconButton(
+                icon: const Icon(Icons.download, color: AppTheme.info),
+                tooltip: 'Export to CSV',
+                onPressed: products.isEmpty
+                    ? null
+                    : () => _exportProducts(products),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(120),
           child: Column(

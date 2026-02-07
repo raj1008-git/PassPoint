@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/services/product_export_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_state.dart';
@@ -63,22 +64,14 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     return filtered;
   }
 
-  Future<void> _forwardProduct(
-    BuildContext context,
-    ProductModel product,
-  ) async {
+  Future<void> _forwardProduct(ProductModel product) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return BlocProvider.value(
-          value: BlocProvider.of<ProductBloc>(context),
-          child: ForwardProductDialog(
-            product: product,
-            currentStaffName: widget.staffName,
-            currentDepartment: widget.department,
-          ),
-        );
-      },
+      builder: (ctx) => ForwardProductDialog(
+        product: product,
+        currentStaffName: widget.staffName,
+        currentDepartment: widget.department,
+      ),
     );
 
     if (result == true && mounted) {
@@ -91,23 +84,15 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     }
   }
 
-  Future<void> _completeProduct(
-    BuildContext context,
-    ProductModel product,
-  ) async {
+  Future<void> _completeProduct(ProductModel product) async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        return BlocProvider.value(
-          value: BlocProvider.of<ProductBloc>(context),
-          child: CompleteProductDialog(
-            product: product,
-            staffName: widget.staffName,
-            department: widget.department,
-            isReceptionist: false,
-          ),
-        );
-      },
+      builder: (ctx) => CompleteProductDialog(
+        product: product,
+        staffName: widget.staffName,
+        department: widget.department,
+        isReceptionist: false,
+      ),
     );
 
     if (result == true && mounted) {
@@ -117,6 +102,63 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           backgroundColor: AppTheme.success,
         ),
       );
+    }
+  }
+
+  Future<void> _exportMyProducts(List<ProductModel> products) async {
+    try {
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Exporting your products...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      // Export staff products using existing static method
+      final path = await ProductExportService.exportStaffProducts(
+        widget.staffName,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported ${products.length} products to:\n$path'),
+            backgroundColor: AppTheme.success,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: AppTheme.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -135,37 +177,59 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           'My Products',
           style: TextStyle(color: AppTheme.dark),
         ),
+        actions: [
+          // Export CSV Button
+          BlocBuilder<ProductBloc, ProductState>(
+            builder: (context, state) {
+              final products = (state is ProductLoaded)
+                  ? state.products
+                  : (state is ProductOperationInProgress)
+                  ? state.products
+                  : (state is ProductOperationSuccess)
+                  ? state.products
+                  : <ProductModel>[];
+
+              return IconButton(
+                icon: const Icon(Icons.download, color: AppTheme.info),
+                tooltip: 'Export to CSV',
+                onPressed: products.isEmpty
+                    ? null
+                    : () => _exportMyProducts(products),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
               // Info Banner
-              // Container(
-              //   width: double.infinity,
-              //   padding: const EdgeInsets.symmetric(
-              //     horizontal: 16,
-              //     vertical: 8,
-              //   ),
-              //   color: AppTheme.info.withOpacity(0.1),
-              //   child: Row(
-              //     children: [
-              //       const Icon(
-              //         Icons.info_outline,
-              //         size: 16,
-              //         color: AppTheme.info,
-              //       ),
-              //       const SizedBox(width: 8),
-              //       Expanded(
-              //         child: Text(
-              //           'Showing products assigned to: ${widget.staffName}',
-              //           style: AppTheme.bodySmall.copyWith(
-              //             color: AppTheme.info,
-              //           ),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                color: AppTheme.info.withOpacity(0.1),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppTheme.info,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Showing products assigned to: ${widget.staffName}',
+                        style: AppTheme.bodySmall.copyWith(
+                          color: AppTheme.info,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               // Search Bar
               Padding(
@@ -239,18 +303,11 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
             controller: _tabController,
             children: [
               _buildProductList(
-                context,
                 _filterProducts(products, 'received_by_reception'),
               ),
-              _buildProductList(
-                context,
-                _filterProducts(products, 'forwarded'),
-              ),
-              _buildProductList(
-                context,
-                _filterProducts(products, 'completed'),
-              ),
-              _buildProductList(context, _filterProducts(products, 'all')),
+              _buildProductList(_filterProducts(products, 'forwarded')),
+              _buildProductList(_filterProducts(products, 'completed')),
+              _buildProductList(_filterProducts(products, 'all')),
             ],
           );
         },
@@ -258,7 +315,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     );
   }
 
-  Widget _buildProductList(BuildContext context, List<ProductModel> products) {
+  Widget _buildProductList(List<ProductModel> products) {
     if (products.isEmpty) {
       return Center(
         child: Column(
@@ -294,14 +351,14 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 builder: (_) => ProductDetailsDialog(product: product),
               );
             },
-            actionButton: _buildActionButtons(context, product),
+            actionButton: _buildActionButtons(product),
           ),
         );
       },
     );
   }
 
-  Widget? _buildActionButtons(BuildContext context, ProductModel product) {
+  Widget? _buildActionButtons(ProductModel product) {
     // Can't take action on completed products
     if (product.currentStatus == 'completed') {
       return null;
@@ -314,7 +371,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _forwardProduct(context, product),
+                onPressed: () => _forwardProduct(product),
                 icon: const Icon(Icons.forward, size: 18),
                 label: const Text('Forward'),
                 style: OutlinedButton.styleFrom(
@@ -327,7 +384,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
             const SizedBox(width: 8),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _completeProduct(context, product),
+                onPressed: () => _completeProduct(product),
                 icon: const Icon(Icons.done_all, size: 18),
                 label: const Text('Complete'),
                 style: ElevatedButton.styleFrom(
