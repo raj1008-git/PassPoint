@@ -154,4 +154,58 @@ class UserRepository {
       return [];
     }
   }
+  // ADD THESE METHODS TO YOUR EXISTING UserRepository CLASS:
+
+  /// Get staff by branch (for branch filtering)
+  Stream<List<UserModel>> getStaffByBranchStream(String branchId) {
+    return _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'staff')
+        .where('status', isEqualTo: 'active')
+        .where('branchId', isEqualTo: branchId)
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => UserModel.fromSnapshot(doc))
+              .toList();
+        });
+  }
+
+  /// Get HQ staff (for approval workflow)
+  Future<List<UserModel>> getHQStaff() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'staff')
+          .where('status', isEqualTo: 'active')
+          .where('branchName', isEqualTo: 'KAMALADI')
+          .orderBy('name')
+          .get();
+
+      return snapshot.docs.map((doc) => UserModel.fromSnapshot(doc)).toList();
+    } catch (e) {
+      devLog('Error fetching HQ staff', params: {'error': e.toString()});
+      rethrow;
+    }
+  }
+
+  /// Get staff by phone number (for login)
+  Future<UserModel?> getStaffByPhone(String phoneNumber) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('phoneNumber', isEqualTo: phoneNumber.trim())
+          .where('role', isEqualTo: 'staff')
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+
+      return UserModel.fromSnapshot(snapshot.docs.first);
+    } catch (e) {
+      devLog('Error fetching staff by phone', params: {'error': e.toString()});
+      return null;
+    }
+  }
 }

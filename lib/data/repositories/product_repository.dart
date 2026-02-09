@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/services/cloudinary_service.dart';
+import '../../core/services/darta_number_service.dart';
 import '../../core/utils/dev.log.dart';
 import '../../features/product/model/product_model.dart';
 
@@ -250,5 +251,264 @@ class ProductRepository {
       signatureFile,
       folder: 'pass_point/product_signatures',
     );
+  }
+
+  /// CREATE STAFF PRODUCT (NEW METHOD)
+  /// Staff creates product from dashboard for inter-branch/department transfer
+  /// CREATE STAFF PRODUCT (FIXED)
+  Future<String> createStaffProduct({
+    required String staffUid,
+    required String staffName,
+    required String staffBranch,
+    required String? staffDepartment,
+    required String receivedLetterNumber,
+    required DateTime receivedLetterDate,
+    required String subject,
+    required String targetType,
+    required String? targetBranchId,
+    required String? targetBranchName,
+    required String? targetDepartmentId,
+    required String? targetDepartmentName,
+    required String targetStaffName,
+  }) async {
+    try {
+      devLog(
+        'Creating staff product',
+        params: {
+          'staffName': staffName,
+          'staffBranch': staffBranch,
+          'targetType': targetType,
+        },
+      );
+
+      final isHQStaff = staffBranch.toUpperCase() == 'KAMALADI';
+      final targetIsBranch = targetType == 'branch';
+      final skipReceptionist = isHQStaff && targetIsBranch;
+
+      if (!isHQStaff && targetIsBranch) {
+        throw Exception(
+          'Branch-to-Branch transfer not allowed. Please route through HQ.',
+        );
+      }
+
+      final dartaNumber = await DartaNumberService.generateDartaNumber(
+        isHQStaff: isHQStaff,
+        targetIsBranch: targetIsBranch,
+      );
+
+      final productId = _firestore.collection('products').doc().id;
+
+      String currentStatus;
+      String? currentDeptId;
+      String? currentDeptName;
+      String? currentPersonName;
+
+      if (skipReceptionist) {
+        currentStatus = 'forwarded';
+        currentDeptId = targetBranchId;
+        currentDeptName = targetBranchName;
+        currentPersonName = targetStaffName;
+      } else {
+        currentStatus = 'submitted';
+        currentDeptId = null;
+        currentDeptName = null;
+        currentPersonName = null;
+      }
+
+      // FIXED: Use Timestamp.now() instead of FieldValue.serverTimestamp()
+      final now = Timestamp.now();
+
+      final statusHistory = [
+        {
+          'status': 'submitted',
+          'action': skipReceptionist
+              ? 'Product registered by $staffName (HQ staff) - Direct delivery'
+              : 'Product registered by $staffName (Branch staff)',
+          'performedBy': staffName,
+          'department': staffDepartment ?? staffBranch,
+          'timestamp': now,
+        },
+      ];
+
+      if (skipReceptionist) {
+        statusHistory.add({
+          'status': 'forwarded',
+          'action':
+              'Auto-forwarded to ${targetBranchName ?? 'Unknown'} - $targetStaffName',
+          'performedBy': 'System (HQ→Branch direct delivery)',
+          'fromDepartment': staffDepartment ?? 'KAMALADI',
+          'toDepartment': targetBranchName ?? 'Unknown',
+          'toPerson': targetStaffName,
+          'timestamp': now,
+        });
+      }
+
+      List<String> unreadByStaff = [];
+      if (skipReceptionist) {
+        final targetStaffDoc = await _firestore
+            .collection('users')
+            .where('name', isEqualTo: targetStaffName)
+            .where('branchName', isEqualTo: targetBranchName)
+            .limit(1)
+            .get();
+
+        if (targetStaffDoc.docs.isNotEmpty) {
+          unreadByStaff.add(targetStaffDoc.docs.first.id);
+        }
+      }
+
+      final productData = {
+        'id': productId,
+        'registrationNumber': dartaNumber,
+        'registrationDate': now,
+        'receivedLetterNumber': receivedLetterNumber,
+        'receivedLetterDate': Timestamp.fromDate(receivedLetterDate),
+        'senderOfficeName':
+            '$staffBranch${staffDepartment != null ? " - $staffDepartment" : ""}',
+        'subject': subject,
+        'sourceType': 'staff',
+        'sourceBranch': staffBranch,
+        'sourceDepartment': staffDepartment,
+        'createdByStaffId': staffUid,
+        'skipReceptionist': skipReceptionist,
+        'targetDepartmentId': targetDepartmentId ?? targetBranchId ?? '',
+        'targetDepartmentName': targetDepartmentName ?? targetBranchName ?? '',
+        'targetPersonName': targetStaffName,
+        'targetBranch': targetIsBranch ? targetBranchName : null,
+        'productPhotoUrl': null,
+        'deliveryPersonName': null,
+        'deliveryPersonContact': null,
+        'currentStatus': currentStatus,
+        'createdAt': now,
+        'completedAt': null,
+        'currentDepartmentId': currentDeptId,
+        'currentDepartmentName': currentDeptName,
+        'currentPersonName': currentPersonName,
+        'statusHistory': statusHistory,
+        'unreadByStaff': unreadByStaff,
+      };
+
+      await _firestore.collection('products').doc(productId).set(productData);
+
+      devLog(
+        'Staff product created successfully',
+        params: {
+          'productId': productId,
+          'dartaNumber': dartaNumber,
+          'skipReceptionist': skipReceptionist,
+        },
+      );
+
+      return productId;
+    } catch (e) {
+      devLog('Error creating staff product', params: {'error': e.toString()});
+      rethrow;
+    }
+  }
+
+  /// Get staff by name and branch (helper method)
+  Future<String?> getStaffUidByNameAndBranch(
+    String staffName,
+    String branchName,
+  ) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('name', isEqualTo: staffName)
+          .where('branchName', isEqualTo: branchName)
+          .where('role', isEqualTo: 'staff')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) return null;
+
+      return querySnapshot.docs.first.id;
+    } catch (e) {
+      devLog('Error fetching staff UID', params: {'error': e.toString()});
+      return null;
+    }
+  }
+
+  /// Get staff by name and department (for HQ)
+  Future<String?> getStaffUidByNameAndDepartment(
+    String staffName,
+    String departmentId,
+  ) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('name', isEqualTo: staffName)
+          .where('departmentId', isEqualTo: departmentId)
+          .where('role', isEqualTo: 'staff')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) return null;
+
+      return querySnapshot.docs.first.id;
+    } catch (e) {
+      devLog('Error fetching staff UID', params: {'error': e.toString()});
+      return null;
+    }
+  }
+
+  /// Get staff members by branch (for dropdown)
+  Future<List<Map<String, String>>> getStaffByBranch(String branchName) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('users')
+          .where('branchName', isEqualTo: branchName)
+          .where('role', isEqualTo: 'staff')
+          .where('status', isEqualTo: 'active')
+          .orderBy('name')
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'uid': doc.id,
+          'name': data['name'] as String,
+          'branch': data['branchName'] as String,
+        };
+      }).toList();
+    } catch (e) {
+      devLog('Error fetching staff by branch', params: {'error': e.toString()});
+      return [];
+    }
+  }
+  /// Get products CREATED BY staff (sent by them)
+  Stream<List<ProductModel>> getSentProductsStream(String staffUid) {
+    return _firestore
+        .collection('products')
+        .where('createdByStaffId', isEqualTo: staffUid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ProductModel.fromSnapshot(doc))
+          .toList();
+    });
+  }
+
+  /// Get ALL products related to staff (received + sent)
+  Stream<List<ProductModel>> getAllStaffProductsStream(
+      String staffName,
+      String staffUid,
+      ) {
+    // This combines products assigned to them AND created by them
+    // Note: Firestore doesn't support OR queries in streams easily,
+    // so we'll merge in the UI layer
+    return _firestore
+        .collection('products')
+        .where('createdByStaffId', isEqualTo: staffUid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ProductModel.fromSnapshot(doc))
+          .toList();
+    });
   }
 }

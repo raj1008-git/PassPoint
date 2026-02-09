@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/services/staff_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../../data/repositories/branch_repository.dart';
 
 class StaffAuthScreen extends StatefulWidget {
   const StaffAuthScreen({super.key});
@@ -136,7 +136,7 @@ class _StaffAuthScreenState extends State<StaffAuthScreen>
 
                               // Tab Views
                               SizedBox(
-                                height: 500,
+                                height: 550,
                                 child: TabBarView(
                                   controller: _tabController,
                                   children: [_LoginTab(), _RegisterTab()],
@@ -158,31 +158,31 @@ class _StaffAuthScreenState extends State<StaffAuthScreen>
   }
 }
 
-// Login Tab
+// Login Tab (UPDATED)
 class _LoginTab extends StatefulWidget {
   @override
   State<_LoginTab> createState() => _LoginTabState();
 }
 
 class _LoginTabState extends State<_LoginTab> {
-  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _signIn() async {
-    if (_emailController.text.trim().isEmpty ||
+    if (_phoneController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter both email and password'),
+          content: Text('Please enter both phone number and password'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -192,8 +192,9 @@ class _LoginTabState extends State<_LoginTab> {
     setState(() => _loading = true);
 
     try {
-      await StaffAuthService.login(
-        _emailController.text.trim(),
+      // Use phone-based login
+      await StaffAuthService.loginWithPhone(
+        _phoneController.text.trim(),
         _passwordController.text,
       );
 
@@ -201,18 +202,6 @@ class _LoginTabState extends State<_LoginTab> {
 
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/staff-dashboard');
-      }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        message = 'Invalid credentials';
-      } else {
-        message = 'Login failed: ${e.message}';
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppTheme.error),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -236,20 +225,21 @@ class _LoginTabState extends State<_LoginTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Email Field
+          // Phone Field
           const Row(
             children: [
-              Icon(Icons.email_outlined, size: 18, color: AppTheme.info),
+              Icon(Icons.phone_outlined, size: 18, color: AppTheme.info),
               SizedBox(width: 8),
-              Text('Email Address', style: AppTheme.labelLarge),
+              Text('Phone Number', style: AppTheme.labelLarge),
             ],
           ),
           const SizedBox(height: 8),
           TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              hintText: 'name@pmlil.com',
+              hintText: '98XXXXXXXX',
               hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
               filled: true,
               fillColor: AppTheme.greyLight,
@@ -353,7 +343,7 @@ class _LoginTabState extends State<_LoginTab> {
   }
 }
 
-// Register Tab
+// Register Tab (UPDATED)
 class _RegisterTab extends StatefulWidget {
   @override
   State<_RegisterTab> createState() => _RegisterTabState();
@@ -361,32 +351,49 @@ class _RegisterTab extends StatefulWidget {
 
 class _RegisterTabState extends State<_RegisterTab> {
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _phoneController = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  String? _selectedBranchId;
+  String? _selectedBranchName;
   String? _selectedDepartmentId;
   String? _selectedDepartmentName;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
+  bool get _isKamaladiBranch =>
+      _selectedBranchName?.toUpperCase() == 'KAMALADI';
+
   Future<void> _register() async {
     if (_nameController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
-        _selectedDepartmentId == null) {
+        _passwordController.text.trim().isEmpty ||
+        _selectedBranchId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill all fields'),
+          content: Text(
+            'Please fill required fields (Name, Phone, Branch, Password)',
+          ),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Check if Kamaladi and department not selected
+    if (_isKamaladiBranch && _selectedDepartmentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a department for Kamaladi staff'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -408,11 +415,15 @@ class _RegisterTabState extends State<_RegisterTab> {
     try {
       await StaffAuthService.register(
         name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
         password: _passwordController.text,
-        phone: _phoneController.text.trim(),
-        departmentId: _selectedDepartmentId!,
-        departmentName: _selectedDepartmentName!,
+        branchId: _selectedBranchId!,
+        branchName: _selectedBranchName!,
+        departmentId: _selectedDepartmentId,
+        departmentName: _selectedDepartmentName,
       );
 
       devLog('Staff registration successful');
@@ -431,9 +442,9 @@ class _RegisterTabState extends State<_RegisterTab> {
                 Text('Registration Submitted'),
               ],
             ),
-            content: const Text(
+            content: Text(
               'Your registration has been submitted successfully!\n\n'
-              'Your account is pending approval from the receptionist. '
+              'Your account is pending approval from ${_isKamaladiBranch ? "the receptionist" : "HQ staff"}. '
               'You will be able to login once your account is approved.',
             ),
             actions: [
@@ -477,6 +488,7 @@ class _RegisterTabState extends State<_RegisterTab> {
               Icon(Icons.person_outline, size: 18, color: AppTheme.info),
               SizedBox(width: 8),
               Text('Full Name', style: AppTheme.labelLarge),
+              Text(' *', style: TextStyle(color: AppTheme.error)),
             ],
           ),
           const SizedBox(height: 8),
@@ -500,12 +512,44 @@ class _RegisterTabState extends State<_RegisterTab> {
 
           const SizedBox(height: 16),
 
-          // Email Field
+          // Phone Field (MANDATORY)
+          const Row(
+            children: [
+              Icon(Icons.phone_outlined, size: 18, color: AppTheme.info),
+              SizedBox(width: 8),
+              Text('Phone Number', style: AppTheme.labelLarge),
+              Text(' *', style: TextStyle(color: AppTheme.error)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              hintText: '98XXXXXXXX',
+              hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+              filled: true,
+              fillColor: AppTheme.greyLight,
+              border: OutlineInputBorder(
+                borderRadius: AppTheme.radiusSmall,
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Email Field (OPTIONAL)
           const Row(
             children: [
               Icon(Icons.email_outlined, size: 18, color: AppTheme.info),
               SizedBox(width: 8),
-              Text('Official Email', style: AppTheme.labelLarge),
+              Text('Email (Optional)', style: AppTheme.labelLarge),
             ],
           ),
           const SizedBox(height: 8),
@@ -513,7 +557,7 @@ class _RegisterTabState extends State<_RegisterTab> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
-              hintText: 'name@pmlil.com',
+              hintText: 'name@pmlil.com (optional)',
               hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
               filled: true,
               fillColor: AppTheme.greyLight,
@@ -536,6 +580,7 @@ class _RegisterTabState extends State<_RegisterTab> {
               Icon(Icons.lock_outline, size: 18, color: AppTheme.info),
               SizedBox(width: 8),
               Text('Password', style: AppTheme.labelLarge),
+              Text(' *', style: TextStyle(color: AppTheme.error)),
             ],
           ),
           const SizedBox(height: 8),
@@ -571,129 +616,16 @@ class _RegisterTabState extends State<_RegisterTab> {
 
           const SizedBox(height: 16),
 
-          // Phone Field
-          const Row(
-            children: [
-              Icon(Icons.phone_outlined, size: 18, color: AppTheme.info),
-              SizedBox(width: 8),
-              Text('Official Phone', style: AppTheme.labelLarge),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              hintText: 'Enter phone number',
-              hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
-              filled: true,
-              fillColor: AppTheme.greyLight,
-              border: OutlineInputBorder(
-                borderRadius: AppTheme.radiusSmall,
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-            ),
-          ),
+          // Branch Dropdown
+          _buildBranchDropdown(),
 
           const SizedBox(height: 16),
 
-          // Department Dropdown
-          const Row(
-            children: [
-              Icon(Icons.business_outlined, size: 18, color: AppTheme.info),
-              SizedBox(width: 8),
-              Text('Department', style: AppTheme.labelLarge),
-            ],
-          ),
-          const SizedBox(height: 8),
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('departments')
-                .orderBy('name')
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.error.withOpacity(0.1),
-                    borderRadius: AppTheme.radiusSmall,
-                  ),
-                  child: const Text('Error loading departments'),
-                );
-              }
-
-              if (!snapshot.hasData) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.greyLight,
-                    borderRadius: AppTheme.radiusSmall,
-                  ),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                );
-              }
-
-              final docs = snapshot.data!.docs;
-              if (docs.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warning.withOpacity(0.1),
-                    borderRadius: AppTheme.radiusSmall,
-                  ),
-                  child: const Text('No departments available'),
-                );
-              }
-
-              return DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  hintText: 'Select department',
-                  hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
-                  filled: true,
-                  fillColor: AppTheme.greyLight,
-                  border: OutlineInputBorder(
-                    borderRadius: AppTheme.radiusSmall,
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                ),
-                value: _selectedDepartmentId,
-                isExpanded: true,
-                items: docs.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return DropdownMenuItem<String>(
-                    value: doc.id,
-                    child: Text(data['name'] ?? doc.id),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    final selected = docs.firstWhere((d) => d.id == val);
-                    final data = selected.data() as Map<String, dynamic>;
-                    setState(() {
-                      _selectedDepartmentId = val;
-                      _selectedDepartmentName = data['name'] ?? val;
-                    });
-                  }
-                },
-              );
-            },
-          ),
+          // Department Dropdown (only for Kamaladi)
+          if (_isKamaladiBranch) ...[
+            _buildDepartmentDropdown(),
+            const SizedBox(height: 16),
+          ],
 
           const SizedBox(height: 24),
 
@@ -752,7 +684,7 @@ class _RegisterTabState extends State<_RegisterTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Your account will be pending until approved by receptionist',
+                    'Phone number required. Email optional. Pending approval.',
                     style: AppTheme.bodySmall.copyWith(color: AppTheme.info),
                   ),
                 ),
@@ -761,6 +693,169 @@ class _RegisterTabState extends State<_RegisterTab> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBranchDropdown() {
+    return FutureBuilder(
+      future: BranchRepository().getBranches(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const CircularProgressIndicator();
+        }
+
+        final branches = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.location_city, size: 18, color: AppTheme.info),
+                SizedBox(width: 8),
+                Text('Branch', style: AppTheme.labelLarge),
+                Text(' *', style: TextStyle(color: AppTheme.error)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                hintText: 'Select branch',
+                hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+                filled: true,
+                fillColor: AppTheme.greyLight,
+                border: OutlineInputBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              value: _selectedBranchId,
+              isExpanded: true,
+              items: branches.map((branch) {
+                return DropdownMenuItem<String>(
+                  value: branch.id,
+                  child: Text(branch.name),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  final selected = branches.firstWhere((b) => b.id == val);
+                  setState(() {
+                    _selectedBranchId = val;
+                    _selectedBranchName = selected.name;
+                    // Reset department if changing branch
+                    _selectedDepartmentId = null;
+                    _selectedDepartmentName = null;
+                  });
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDepartmentDropdown() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('departments')
+          .orderBy('name')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.error.withOpacity(0.1),
+              borderRadius: AppTheme.radiusSmall,
+            ),
+            child: const Text('Error loading departments'),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.greyLight,
+              borderRadius: AppTheme.radiusSmall,
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.warning.withOpacity(0.1),
+              borderRadius: AppTheme.radiusSmall,
+            ),
+            child: const Text('No departments available'),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.business_outlined, size: 18, color: AppTheme.info),
+                SizedBox(width: 8),
+                Text('Department', style: AppTheme.labelLarge),
+                Text(' *', style: TextStyle(color: AppTheme.error)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                hintText: 'Select department',
+                hintStyle: TextStyle(color: AppTheme.grey.withOpacity(0.5)),
+                filled: true,
+                fillColor: AppTheme.greyLight,
+                border: OutlineInputBorder(
+                  borderRadius: AppTheme.radiusSmall,
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+              value: _selectedDepartmentId,
+              isExpanded: true,
+              items: docs.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return DropdownMenuItem<String>(
+                  value: doc.id,
+                  child: Text(data['name'] ?? doc.id),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  final selected = docs.firstWhere((d) => d.id == val);
+                  final data = selected.data() as Map<String, dynamic>;
+                  setState(() {
+                    _selectedDepartmentId = val;
+                    _selectedDepartmentName = data['name'] ?? val;
+                  });
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

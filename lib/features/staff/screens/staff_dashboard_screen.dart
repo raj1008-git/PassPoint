@@ -13,6 +13,7 @@ import '../../admin/widgets/visitor_log_tile.dart';
 import '../../export/utils/file_writer.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_event.dart';
+import '../../product/screens/staff_product_checkin_screen.dart';
 import '../widgets/change_password_dialog.dart';
 
 class StaffDashboardScreen extends StatefulWidget {
@@ -55,12 +56,15 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
   }
 
   Stream<QuerySnapshot> _visitorStream() {
-    if (_staffEmail == null) return const Stream.empty();
+    // Use staff name for querying (not email)
+    if (_staffName == null || _staffName!.isEmpty) {
+      return const Stream.empty();
+    }
 
-    // Filter visitors where toMeet matches staff email or name
+    // Filter visitors where toMeet matches staff name
     return FirebaseFirestore.instance
         .collection('visitors')
-        .where('toMeet', isEqualTo: _staffName ?? _staffEmail)
+        .where('toMeet', isEqualTo: _staffName)
         .orderBy('checkInTime', descending: true)
         .snapshots();
   }
@@ -418,7 +422,32 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                       ),
                                     ),
                                   ),
-
+                                  OutlinedButton.icon(
+                                    onPressed: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const StaffProductCheckInScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Check-In Product'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.success,
+                                      side: const BorderSide(
+                                        color: AppTheme.greyLight,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
                                   OutlinedButton.icon(
                                     onPressed: () async {
                                       // Fetch staff info from Firestore
@@ -478,9 +507,9 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                       Icons.inventory_2,
                                       size: 18,
                                     ),
-                                    label: const Text('Products'),
+                                    label: const Text('My Products'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.success,
+                                      foregroundColor: AppTheme.info,
                                       side: const BorderSide(
                                         color: AppTheme.greyLight,
                                       ),

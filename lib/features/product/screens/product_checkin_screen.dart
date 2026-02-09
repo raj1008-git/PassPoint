@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/services/darta_number_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../../data/repositories/product_repository.dart';
@@ -148,7 +149,8 @@ class _ProductCheckInScreenState extends State<ProductCheckInScreen> {
     try {
       final repo = ProductRepository();
       await repo.createProduct(
-        registrationNumber: _regNumberCtrl.text.trim(),
+        registrationNumber:
+            await DartaNumberService.generateBranchDartaNumber(),
         registrationDate: _registrationDate!,
         receivedLetterNumber: _receivedLetterNumberCtrl.text.trim(),
         receivedLetterDate: _receivedLetterDate!,

@@ -327,14 +327,14 @@ class _StaffApprovalView extends StatelessWidget {
                 _buildInfoRow(
                   Icons.email_outlined,
                   'Email',
-                  staff.email,
+                  staff.email ?? 'Not provided',
                   isTablet,
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
                   Icons.phone_outlined,
                   'Phone',
-                  staff.phone,
+                  staff.phoneNumber,
                   isTablet,
                 ),
                 const SizedBox(height: 12),

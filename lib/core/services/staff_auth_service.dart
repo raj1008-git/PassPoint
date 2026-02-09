@@ -7,8 +7,9 @@ import '../utils/dev.log.dart';
 
 class StaffAuthService {
   static const String _keyLoggedIn = 'staff_logged_in';
-  static const String _keyEmail = 'staff_email';
-  static const String _allowedDomain = '@pmlil.com';
+  static const String _keyPhone = 'staff_phone';
+  static const String _keyEmail =
+      'staff_email'; // Keep for backward compatibility
 
   // Check if staff is logged in
   static Future<bool> isLoggedIn() async {
@@ -33,52 +34,58 @@ class StaffAuthService {
   }
 
   // Set logged in state
-  static Future<void> setLoggedIn(bool value, String? email) async {
+  static Future<void> setLoggedIn(bool value, String? identifier) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyLoggedIn, value);
-    if (email != null) {
-      await prefs.setString(_keyEmail, email);
+    if (identifier != null) {
+      // Store phone number primarily, email as fallback
+      if (identifier.contains('@')) {
+        await prefs.setString(_keyEmail, identifier);
+      } else {
+        await prefs.setString(_keyPhone, identifier);
+      }
     } else {
+      await prefs.remove(_keyPhone);
       await prefs.remove(_keyEmail);
     }
     devLog('StaffAuthService.setLoggedIn', params: {'value': value});
   }
 
-  // Get stored email
+  // Get stored phone
+  static Future<String?> getPhone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPhone);
+  }
+
+  // Get stored email (backward compatibility)
   static Future<String?> getEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyEmail);
   }
 
-  // Validate email domain
-  static bool isValidEmail(String email) {
-    final trimmed = email.trim().toLowerCase();
-    return trimmed.endsWith(_allowedDomain);
-  }
-
-  // Register new staff (self-registration with pending status)
+  // Register new staff (phone-based, email optional)
   static Future<UserModel> register({
     required String name,
-    required String email,
+    required String phoneNumber,
+    String? email, // OPTIONAL now
     required String password,
-    required String phone,
-    required String departmentId,
-    required String departmentName,
+    required String branchId,
+    required String branchName,
+    String? departmentId, // Only for HQ staff
+    String? departmentName, // Only for HQ staff
   }) async {
     try {
-      // Validate domain
-      if (!isValidEmail(email)) {
-        throw Exception('Only $_allowedDomain emails are allowed');
-      }
-
       devLog(
         'Staff registration attempt',
-        params: {'email': email, 'name': name},
+        params: {'phone': phoneNumber, 'name': name, 'branch': branchName},
       );
+
+      // Create a unique email if not provided (for Firebase Auth requirement)
+      final authEmail = email ?? '${phoneNumber}@staff.pmlil.internal';
 
       // Create Firebase Auth account
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: authEmail,
         password: password,
       );
 
@@ -86,16 +93,21 @@ class StaffAuthService {
         throw Exception('Registration failed');
       }
 
-      // Create user document in Firestore with PENDING status
+      // Determine status: HQ staff approved by receptionist, Branch staff approved by HQ staff
+      final isPendingApproval = true; // All new registrations need approval
+
+      // Create user document in Firestore
       final userData = UserModel(
         uid: cred.user!.uid,
         name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
+        email: email?.trim(), // Store actual email if provided, else null
+        phoneNumber: phoneNumber.trim(),
         role: 'staff',
+        branchId: branchId,
+        branchName: branchName,
         departmentId: departmentId,
         departmentName: departmentName,
-        status: 'pending', // PENDING by default
+        status: isPendingApproval ? 'pending' : 'active',
         createdAt: Timestamp.now(),
       );
 
@@ -118,15 +130,77 @@ class StaffAuthService {
     }
   }
 
-  // Login
-  static Future<UserModel> login(String email, String password) async {
+  // Login with phone number + password (PRIMARY METHOD)
+  static Future<UserModel> loginWithPhone(
+    String phoneNumber,
+    String password,
+  ) async {
     try {
-      // Validate domain
-      if (!isValidEmail(email)) {
-        throw Exception('Only $_allowedDomain emails are allowed');
+      devLog('Staff login attempt (phone)', params: {'phone': phoneNumber});
+
+      // Find user by phone number
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('phoneNumber', isEqualTo: phoneNumber.trim())
+          .where('role', isEqualTo: 'staff')
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        throw Exception('No account found with this phone number');
       }
 
-      devLog('Staff login attempt', params: {'email': email});
+      final userDoc = querySnapshot.docs.first;
+      final userData = UserModel.fromMap(userDoc.data());
+
+      // Get the auth email (could be real email or generated one)
+      final authEmail = userData.email ?? '${phoneNumber}@staff.pmlil.internal';
+
+      // Sign in with Firebase Auth
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: authEmail,
+        password: password,
+      );
+
+      if (cred.user == null) {
+        throw Exception('Login failed');
+      }
+
+      // Verify it's the correct user
+      if (cred.user!.uid != userData.uid) {
+        await FirebaseAuth.instance.signOut();
+        throw Exception('Account mismatch');
+      }
+
+      // Check if pending
+      if (userData.isPending) {
+        await FirebaseAuth.instance.signOut();
+        throw Exception(
+          'Your account is pending approval. Please contact the receptionist.',
+        );
+      }
+
+      // Check if active
+      if (!userData.isActive) {
+        await FirebaseAuth.instance.signOut();
+        throw Exception('Account is not active');
+      }
+
+      // Set persistent login
+      await setLoggedIn(true, phoneNumber.trim());
+
+      devLog('Staff logged in successfully', params: {'uid': cred.user!.uid});
+      return userData;
+    } catch (e) {
+      devLog('Staff login error', params: {'error': e.toString()});
+      rethrow;
+    }
+  }
+
+  // Login with email + password (FALLBACK for old users)
+  static Future<UserModel> loginWithEmail(String email, String password) async {
+    try {
+      devLog('Staff login attempt (email)', params: {'email': email});
 
       // Sign in with Firebase
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -31,9 +33,13 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
   String _searchQuery = '';
 
   @override
+  @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 5,
+      vsync: this,
+    ); // Changed from 4 to 5
   }
 
   @override
@@ -259,6 +265,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 isScrollable: true,
                 tabs: const [
                   Tab(text: 'Received'),
+                  Tab(text: 'Sent'), // NEW TAB
                   Tab(text: 'Forwarded'),
                   Tab(text: 'Completed'),
                   Tab(text: 'All'),
@@ -305,6 +312,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
               _buildProductList(
                 _filterProducts(products, 'received_by_reception'),
               ),
+              _buildSentProductsList(), // NEW - Shows products staff created
               _buildProductList(_filterProducts(products, 'forwarded')),
               _buildProductList(_filterProducts(products, 'completed')),
               _buildProductList(_filterProducts(products, 'all')),
@@ -397,6 +405,276 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           ],
         ),
       ],
+    );
+  }
+
+  // New method to show sent products
+  Widget _buildSentProductsList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('products')
+          .where(
+            'createdByStaffId',
+            isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+          )
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final sentProducts = snapshot.data!.docs
+            .map((doc) => ProductModel.fromSnapshot(doc))
+            .toList();
+
+        // Apply search filter
+        final filtered = _searchQuery.isEmpty
+            ? sentProducts
+            : sentProducts.where((p) {
+                final query = _searchQuery.toLowerCase();
+                return p.registrationNumber.toLowerCase().contains(query) ||
+                    p.subject.toLowerCase().contains(query) ||
+                    p.targetPersonName.toLowerCase().contains(query);
+              }).toList();
+
+        if (filtered.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.send_outlined,
+                  size: 64,
+                  color: AppTheme.grey.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No products sent yet',
+                  style: AppTheme.bodyLarge.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Products you send will appear here',
+                  style: AppTheme.bodySmall.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final product = filtered[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSentProductTile(product),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // New tile for sent products (shows status tracking)
+  Widget _buildSentProductTile(ProductModel product) {
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (_) => ProductDetailsDialog(product: product),
+        );
+      },
+      borderRadius: AppTheme.radiusMedium,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.white,
+          borderRadius: AppTheme.radiusMedium,
+          border: Border.all(color: AppTheme.greyLight, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
+              children: [
+                // Registration Number Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.numbers, size: 14, color: AppTheme.info),
+                      const SizedBox(width: 4),
+                      Text(
+                        product.registrationNumber,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                // Status Badge
+                _buildStatusBadge(product.currentStatus),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Subject
+            Text(
+              product.subject,
+              style: AppTheme.labelLarge.copyWith(fontSize: 16),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 8),
+
+            // Sent To
+            Row(
+              children: [
+                const Icon(Icons.send, size: 14, color: AppTheme.info),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Sent to: ${product.targetDepartmentName} - ${product.targetPersonName}',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // Current Status Info
+            if (product.currentStatus == 'forwarded' ||
+                product.currentStatus == 'completed') ...[
+              Row(
+                children: [
+                  Icon(
+                    product.currentStatus == 'completed'
+                        ? Icons.check_circle
+                        : Icons.location_on,
+                    size: 14,
+                    color: product.currentStatus == 'completed'
+                        ? AppTheme.success
+                        : AppTheme.warning,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      product.currentStatus == 'completed'
+                          ? 'Completed by ${product.currentPersonName ?? "Unknown"}'
+                          : 'Currently with: ${product.currentPersonName ?? "In transit"}',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: product.currentStatus == 'completed'
+                            ? AppTheme.success
+                            : AppTheme.warning,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (product.currentStatus == 'submitted') ...[
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 14, color: AppTheme.warning),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Awaiting receptionist approval',
+                      style: AppTheme.bodySmall.copyWith(
+                        color: AppTheme.warning,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color bgColor;
+    Color textColor;
+    String label;
+
+    switch (status) {
+      case 'submitted':
+        bgColor = AppTheme.pendingOrange;
+        textColor = AppTheme.pendingOrangeIcon;
+        label = 'Pending';
+        break;
+      case 'received_by_reception':
+        bgColor = AppTheme.checkedInGreen;
+        textColor = AppTheme.checkedInGreenIcon;
+        label = 'Received';
+        break;
+      case 'forwarded':
+        bgColor = AppTheme.checkedOutBlue;
+        textColor = AppTheme.info;
+        label = 'In Transit';
+        break;
+      case 'completed':
+        bgColor = AppTheme.totalPurple;
+        textColor = AppTheme.totalPurpleIcon;
+        label = 'Completed';
+        break;
+      default:
+        bgColor = AppTheme.greyLight;
+        textColor = AppTheme.grey;
+        label = status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
     );
   }
 }
