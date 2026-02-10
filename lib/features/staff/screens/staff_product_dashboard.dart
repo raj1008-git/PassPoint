@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/services/product_export_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_state.dart';
 import '../../product/model/product_model.dart';
@@ -31,15 +32,12 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
+  final _productRepository = ProductRepository();
 
-  @override
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 5,
-      vsync: this,
-    ); // Changed from 4 to 5
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -113,7 +111,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
 
   Future<void> _exportMyProducts(List<ProductModel> products) async {
     try {
-      // Show loading
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Row(
@@ -134,7 +131,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
         ),
       );
 
-      // Export staff products using existing static method
       final path = await ProductExportService.exportStaffProducts(
         widget.staffName,
       );
@@ -170,6 +166,8 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -184,7 +182,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
           style: TextStyle(color: AppTheme.dark),
         ),
         actions: [
-          // Export CSV Button
           BlocBuilder<ProductBloc, ProductState>(
             builder: (context, state) {
               final products = (state is ProductLoaded)
@@ -256,19 +253,138 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 ),
               ),
 
-              // Tabs
+              // Tabs with BADGES on multiple tabs
               TabBar(
                 controller: _tabController,
                 labelColor: AppTheme.primaryRed,
                 unselectedLabelColor: AppTheme.grey,
                 indicatorColor: AppTheme.primaryRed,
                 isScrollable: true,
-                tabs: const [
-                  Tab(text: 'Received'),
-                  Tab(text: 'Sent'), // NEW TAB
-                  Tab(text: 'Forwarded'),
-                  Tab(text: 'Completed'),
-                  Tab(text: 'All'),
+                tabs: [
+                  // Badge on "Received" tab (status = received_by_reception)
+                  if (currentUser != null)
+                    StreamBuilder<int>(
+                      stream: _productRepository.getUnreadCountForStaffByStatus(
+                        currentUser.uid,
+                        'received_by_reception',
+                      ),
+                      builder: (context, snapshot) {
+                        final unreadCount = snapshot.data ?? 0;
+                        return Tab(
+                          child: Row(
+                            children: [
+                              const Text('Received'),
+                              if (unreadCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryRed,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    const Tab(text: 'Received'),
+                  const Tab(text: 'Sent'),
+                  // Badge on "Forwarded" tab (status = forwarded)
+                  if (currentUser != null)
+                    StreamBuilder<int>(
+                      stream: _productRepository.getUnreadCountForStaffByStatus(
+                        currentUser.uid,
+                        'forwarded',
+                      ),
+                      builder: (context, snapshot) {
+                        final unreadCount = snapshot.data ?? 0;
+                        return Tab(
+                          child: Row(
+                            children: [
+                              const Text('Forwarded'),
+                              if (unreadCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.info,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    const Tab(text: 'Forwarded'),
+                  const Tab(text: 'Completed'),
+                  // Badge on "All" tab (total unread count)
+                  if (currentUser != null)
+                    StreamBuilder<int>(
+                      stream: _productRepository.getUnreadCountForStaff(
+                        currentUser.uid,
+                      ),
+                      builder: (context, snapshot) {
+                        final unreadCount = snapshot.data ?? 0;
+                        return Tab(
+                          child: Row(
+                            children: [
+                              const Text('All'),
+                              if (unreadCount > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.totalPurpleIcon,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$unreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  else
+                    const Tab(text: 'All'),
                 ],
               ),
             ],
@@ -312,7 +428,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
               _buildProductList(
                 _filterProducts(products, 'received_by_reception'),
               ),
-              _buildSentProductsList(), // NEW - Shows products staff created
+              _buildSentProductsList(),
               _buildProductList(_filterProducts(products, 'forwarded')),
               _buildProductList(_filterProducts(products, 'completed')),
               _buildProductList(_filterProducts(products, 'all')),
@@ -367,7 +483,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
   }
 
   Widget? _buildActionButtons(ProductModel product) {
-    // Can't take action on completed products
     if (product.currentStatus == 'completed') {
       return null;
     }
@@ -408,7 +523,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     );
   }
 
-  // New method to show sent products
   Widget _buildSentProductsList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -432,7 +546,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
             .map((doc) => ProductModel.fromSnapshot(doc))
             .toList();
 
-        // Apply search filter
         final filtered = _searchQuery.isEmpty
             ? sentProducts
             : sentProducts.where((p) {
@@ -486,7 +599,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
     );
   }
 
-  // New tile for sent products (shows status tracking)
   Widget _buildSentProductTile(ProductModel product) {
     return InkWell(
       onTap: () {
@@ -506,10 +618,8 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
             Row(
               children: [
-                // Registration Number Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -536,24 +646,17 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                   ),
                 ),
                 const Spacer(),
-                // Status Badge
                 _buildStatusBadge(product.currentStatus),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Subject
             Text(
               product.subject,
               style: AppTheme.labelLarge.copyWith(fontSize: 16),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 8),
-
-            // Sent To
             Row(
               children: [
                 const Icon(Icons.send, size: 14, color: AppTheme.info),
@@ -570,10 +673,7 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 ),
               ],
             ),
-
             const SizedBox(height: 6),
-
-            // Current Status Info
             if (product.currentStatus == 'forwarded' ||
                 product.currentStatus == 'completed') ...[
               Row(
@@ -605,7 +705,6 @@ class _StaffProductDashboardState extends State<StaffProductDashboard>
                 ],
               ),
             ],
-
             if (product.currentStatus == 'submitted') ...[
               Row(
                 children: [

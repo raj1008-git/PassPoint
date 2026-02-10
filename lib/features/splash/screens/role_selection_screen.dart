@@ -11,9 +11,14 @@ class RoleSelectionScreen extends StatelessWidget {
     Navigator.of(context).pushNamed('/receptionist-login');
   }
 
-  void _handleStaffAccess(BuildContext context) {
-    devLog('PMLIL Staff button pressed');
-    Navigator.of(context).pushNamed('/staff-auth');
+  void _handleHQStaffAccess(BuildContext context) {
+    devLog('HQ Staff button pressed');
+    Navigator.of(context).pushNamed('/staff-auth', arguments: {'isHQ': true});
+  }
+
+  void _handleBranchStaffAccess(BuildContext context) {
+    devLog('Branch Staff button pressed');
+    Navigator.of(context).pushNamed('/staff-auth', arguments: {'isHQ': false});
   }
 
   @override
@@ -67,7 +72,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
                       SizedBox(height: isTablet ? 56 : 48),
 
-                      // Role Cards
+                      // PHASE 3: 3 Role Cards
                       if (isLandscape && isTablet)
                         Row(
                           children: [
@@ -75,7 +80,7 @@ class RoleSelectionScreen extends StatelessWidget {
                               child: _buildRoleCard(
                                 context: context,
                                 title: 'Reception',
-                                subtitle: 'Admin access & visitor management',
+                                subtitle: 'KAMALADI HQ only',
                                 icon: Icons.business_center,
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -89,13 +94,13 @@ class RoleSelectionScreen extends StatelessWidget {
                                 isTablet: true,
                               ),
                             ),
-                            const SizedBox(width: 32),
+                            const SizedBox(width: 24),
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
-                                title: 'PMLIL Staff',
-                                subtitle: 'View your visitor requests',
-                                icon: Icons.people_alt,
+                                title: 'HQ Staff',
+                                subtitle: 'KAMALADI with departments',
+                                icon: Icons.apartment,
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -104,7 +109,26 @@ class RoleSelectionScreen extends StatelessWidget {
                                     AppTheme.info.withOpacity(0.8),
                                   ],
                                 ),
-                                onTap: () => _handleStaffAccess(context),
+                                onTap: () => _handleHQStaffAccess(context),
+                                isTablet: true,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _buildRoleCard(
+                                context: context,
+                                title: 'Branch Staff',
+                                subtitle: '140 branches across Nepal',
+                                icon: Icons.location_city,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppTheme.success,
+                                    AppTheme.success.withOpacity(0.8),
+                                  ],
+                                ),
+                                onTap: () => _handleBranchStaffAccess(context),
                                 isTablet: true,
                               ),
                             ),
@@ -117,7 +141,7 @@ class RoleSelectionScreen extends StatelessWidget {
                             _buildRoleCard(
                               context: context,
                               title: 'Reception',
-                              subtitle: 'Admin access & visitor management',
+                              subtitle: 'KAMALADI HQ only',
                               icon: Icons.business_center,
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
@@ -133,9 +157,9 @@ class RoleSelectionScreen extends StatelessWidget {
                             SizedBox(height: isTablet ? 24 : 20),
                             _buildRoleCard(
                               context: context,
-                              title: 'PMLIL Staff',
-                              subtitle: 'View your visitor requests',
-                              icon: Icons.people_alt,
+                              title: 'HQ Staff',
+                              subtitle: 'KAMALADI with departments',
+                              icon: Icons.apartment,
                               gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -144,7 +168,24 @@ class RoleSelectionScreen extends StatelessWidget {
                                   AppTheme.info.withOpacity(0.8),
                                 ],
                               ),
-                              onTap: () => _handleStaffAccess(context),
+                              onTap: () => _handleHQStaffAccess(context),
+                              isTablet: isTablet,
+                            ),
+                            SizedBox(height: isTablet ? 24 : 20),
+                            _buildRoleCard(
+                              context: context,
+                              title: 'Branch Staff',
+                              subtitle: '140 branches across Nepal',
+                              icon: Icons.location_city,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.success,
+                                  AppTheme.success.withOpacity(0.8),
+                                ],
+                              ),
+                              onTap: () => _handleBranchStaffAccess(context),
                               isTablet: isTablet,
                             ),
                           ],

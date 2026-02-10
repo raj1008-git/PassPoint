@@ -139,13 +139,40 @@ class ProductRepository {
         'department': 'Reception',
       });
 
-      await _firestore.collection('products').doc(productId).update({
+      // PHASE 3: Add target staff to unread list when receptionist receives
+      String? targetStaffUid;
+      try {
+        final staffQuery = await _firestore
+            .collection('users')
+            .where('name', isEqualTo: product.targetPersonName)
+            .where('role', isEqualTo: 'staff')
+            .limit(1)
+            .get();
+
+        if (staffQuery.docs.isNotEmpty) {
+          targetStaffUid = staffQuery.docs.first.id;
+        }
+      } catch (e) {
+        devLog(
+          'Error fetching target staff UID',
+          params: {'error': e.toString()},
+        );
+      }
+
+      final updateData = {
         'currentStatus': 'received_by_reception',
         'currentDepartmentId': product.targetDepartmentId,
         'currentDepartmentName': product.targetDepartmentName,
         'currentPersonName': product.targetPersonName,
         'statusHistory': updatedHistory,
-      });
+      };
+
+      // Add to unread list if staff UID found
+      if (targetStaffUid != null) {
+        updateData['unreadByStaff'] = FieldValue.arrayUnion([targetStaffUid]);
+      }
+
+      await _firestore.collection('products').doc(productId).update(updateData);
 
       devLog('Product received by reception');
     } catch (e) {
@@ -187,13 +214,40 @@ class ProductRepository {
         'feedback': feedback,
       });
 
-      await _firestore.collection('products').doc(productId).update({
+      // PHASE 3: Add new target staff to unread list
+      String? targetStaffUid;
+      try {
+        final staffQuery = await _firestore
+            .collection('users')
+            .where('name', isEqualTo: toPersonName)
+            .where('role', isEqualTo: 'staff')
+            .limit(1)
+            .get();
+
+        if (staffQuery.docs.isNotEmpty) {
+          targetStaffUid = staffQuery.docs.first.id;
+        }
+      } catch (e) {
+        devLog(
+          'Error fetching target staff UID',
+          params: {'error': e.toString()},
+        );
+      }
+
+      final updateData = {
         'currentStatus': 'forwarded',
         'currentDepartmentId': toDepartmentId,
         'currentDepartmentName': toDepartmentName,
         'currentPersonName': toPersonName,
         'statusHistory': updatedHistory,
-      });
+      };
+
+      // Add to unread list if staff UID found
+      if (targetStaffUid != null) {
+        updateData['unreadByStaff'] = FieldValue.arrayUnion([targetStaffUid]);
+      }
+
+      await _firestore.collection('products').doc(productId).update(updateData);
 
       devLog('Product forwarded successfully');
     } catch (e) {
@@ -255,7 +309,6 @@ class ProductRepository {
 
   /// CREATE STAFF PRODUCT (NEW METHOD)
   /// Staff creates product from dashboard for inter-branch/department transfer
-  /// CREATE STAFF PRODUCT (FIXED)
   Future<String> createStaffProduct({
     required String staffUid,
     required String staffName,
@@ -315,7 +368,6 @@ class ProductRepository {
         currentPersonName = null;
       }
 
-      // FIXED: Use Timestamp.now() instead of FieldValue.serverTimestamp()
       final now = Timestamp.now();
 
       final statusHistory = [
@@ -478,6 +530,7 @@ class ProductRepository {
       return [];
     }
   }
+
   /// Get products CREATED BY staff (sent by them)
   Stream<List<ProductModel>> getSentProductsStream(String staffUid) {
     return _firestore
@@ -486,17 +539,17 @@ class ProductRepository {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ProductModel.fromSnapshot(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ProductModel.fromSnapshot(doc))
+              .toList();
+        });
   }
 
   /// Get ALL products related to staff (received + sent)
   Stream<List<ProductModel>> getAllStaffProductsStream(
-      String staffName,
-      String staffUid,
-      ) {
+    String staffName,
+    String staffUid,
+  ) {
     // This combines products assigned to them AND created by them
     // Note: Firestore doesn't support OR queries in streams easily,
     // so we'll merge in the UI layer
@@ -506,9 +559,71 @@ class ProductRepository {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ProductModel.fromSnapshot(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ProductModel.fromSnapshot(doc))
+              .toList();
+        });
+  }
+
+  // ============================================================================
+  // PHASE 3: BADGE NOTIFICATION METHODS
+  // ============================================================================
+
+  /// Mark product as read by staff (remove from unreadByStaff array)
+  Future<void> markProductAsRead(String productId, String staffUid) async {
+    try {
+      devLog(
+        'Marking product as read',
+        params: {'productId': productId, 'staffUid': staffUid},
+      );
+
+      await _firestore.collection('products').doc(productId).update({
+        'unreadByStaff': FieldValue.arrayRemove([staffUid]),
+      });
+
+      devLog('Product marked as read successfully');
+    } catch (e) {
+      devLog('Error marking product as read', params: {'error': e.toString()});
+      // Don't rethrow - this is non-critical
+    }
+  }
+
+  /// Get TOTAL unread count for staff (all unread products)
+  Stream<int> getUnreadCountForStaff(String staffUid) {
+    return _firestore
+        .collection('products')
+        .where('unreadByStaff', arrayContains: staffUid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get unread count for staff BY STATUS (for specific tabs)
+  Stream<int> getUnreadCountForStaffByStatus(String staffUid, String status) {
+    return _firestore
+        .collection('products')
+        .where('unreadByStaff', arrayContains: staffUid)
+        .where('currentStatus', isEqualTo: status)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get pending count for receptionist (products in "Submitted" status)
+  Stream<int> getPendingCountForReceptionist() {
+    return _firestore
+        .collection('products')
+        .where('currentStatus', isEqualTo: 'submitted')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Add staff UID to unreadByStaff when product is assigned (helper)
+  Future<void> _addToUnreadList(String productId, String staffUid) async {
+    try {
+      await _firestore.collection('products').doc(productId).update({
+        'unreadByStaff': FieldValue.arrayUnion([staffUid]),
+      });
+    } catch (e) {
+      devLog('Error adding to unread list', params: {'error': e.toString()});
+    }
   }
 }

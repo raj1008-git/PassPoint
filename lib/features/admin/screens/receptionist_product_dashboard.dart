@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/services/product_export_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_event.dart';
 import '../../product/bloc/product_state.dart';
@@ -27,6 +28,7 @@ class _ReceptionistProductDashboardState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
+  final _productRepository = ProductRepository();
 
   @override
   void initState() {
@@ -105,7 +107,7 @@ class _ReceptionistProductDashboardState
         product: product,
         staffName: widget.receptionistName,
         department: 'Reception',
-        isReceptionist: true, // Receptionist intervention
+        isReceptionist: true,
       ),
     );
 
@@ -123,7 +125,6 @@ class _ReceptionistProductDashboardState
 
   Future<void> _exportProducts(List<ProductModel> products) async {
     try {
-      // Show loading
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Row(
@@ -144,7 +145,6 @@ class _ReceptionistProductDashboardState
         ),
       );
 
-      // Export all products using existing static method
       final path = await ProductExportService.exportAllProducts();
 
       if (mounted) {
@@ -192,7 +192,6 @@ class _ReceptionistProductDashboardState
           style: TextStyle(color: AppTheme.dark),
         ),
         actions: [
-          // Export CSV Button
           BlocBuilder<ProductBloc, ProductState>(
             builder: (context, state) {
               final products = (state is ProductLoaded)
@@ -236,19 +235,53 @@ class _ReceptionistProductDashboardState
                 ),
               ),
 
-              // Tabs
+              // Tabs with BADGE on "Submitted"
               TabBar(
                 controller: _tabController,
                 labelColor: AppTheme.primaryRed,
                 unselectedLabelColor: AppTheme.grey,
                 indicatorColor: AppTheme.primaryRed,
                 isScrollable: true,
-                tabs: const [
-                  Tab(text: 'Submitted'),
-                  Tab(text: 'Received'),
-                  Tab(text: 'Forwarded'),
-                  Tab(text: 'Completed'),
-                  Tab(text: 'All'),
+                tabs: [
+                  // PHASE 3: Badge on "Submitted" tab
+                  StreamBuilder<int>(
+                    stream: _productRepository.getPendingCountForReceptionist(),
+                    builder: (context, snapshot) {
+                      final pendingCount = snapshot.data ?? 0;
+                      return Tab(
+                        child: Row(
+                          children: [
+                            const Text('Submitted'),
+                            if (pendingCount > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warning,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$pendingCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const Tab(text: 'Received'),
+                  const Tab(text: 'Forwarded'),
+                  const Tab(text: 'Completed'),
+                  const Tab(text: 'All'),
                 ],
               ),
             ],
@@ -363,7 +396,6 @@ class _ReceptionistProductDashboardState
       );
     }
 
-    // Receptionist can intervene and complete any non-completed product
     if (product.currentStatus != 'completed') {
       return SizedBox(
         width: double.infinity,

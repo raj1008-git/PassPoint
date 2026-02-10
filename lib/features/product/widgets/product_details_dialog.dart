@@ -1,15 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../model/product_model.dart';
 
-class ProductDetailsDialog extends StatelessWidget {
+class ProductDetailsDialog extends StatefulWidget {
   final ProductModel product;
 
   const ProductDetailsDialog({Key? key, required this.product})
     : super(key: key);
+
+  @override
+  State<ProductDetailsDialog> createState() => _ProductDetailsDialogState();
+}
+
+class _ProductDetailsDialogState extends State<ProductDetailsDialog> {
+  final _productRepository = ProductRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    // PHASE 3: Auto-mark as read when dialog opens
+    _markAsReadIfNeeded();
+  }
+
+  Future<void> _markAsReadIfNeeded() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    // Only mark as read if current user is in the unreadByStaff list
+    if (widget.product.unreadByStaff.contains(currentUser.uid)) {
+      await _productRepository.markProductAsRead(
+        widget.product.id,
+        currentUser.uid,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +83,7 @@ class ProductDetailsDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Registration #${product.registrationNumber}',
+                          'Registration #${widget.product.registrationNumber}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -88,11 +117,11 @@ class ProductDetailsDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Product Photo
-                    if (product.productPhotoUrl != null) ...[
+                    if (widget.product.productPhotoUrl != null) ...[
                       ClipRRect(
                         borderRadius: AppTheme.radiusMedium,
                         child: Image.network(
-                          product.productPhotoUrl!,
+                          widget.product.productPhotoUrl!,
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -110,23 +139,23 @@ class ProductDetailsDialog extends StatelessWidget {
                     _buildSection('Registration Details', Icons.edit_document, [
                       _buildDetailRow(
                         'Registration Number',
-                        product.registrationNumber,
+                        widget.product.registrationNumber,
                       ),
                       _buildDetailRow(
                         'Registration Date',
                         DateFormat(
                           'yyyy-MM-dd',
-                        ).format(product.registrationDate.toDate()),
+                        ).format(widget.product.registrationDate.toDate()),
                       ),
                       _buildDetailRow(
                         'Received Letter Number',
-                        product.receivedLetterNumber,
+                        widget.product.receivedLetterNumber,
                       ),
                       _buildDetailRow(
                         'Received Letter Date',
                         DateFormat(
                           'yyyy-MM-dd',
-                        ).format(product.receivedLetterDate.toDate()),
+                        ).format(widget.product.receivedLetterDate.toDate()),
                       ),
                     ]),
 
@@ -136,9 +165,12 @@ class ProductDetailsDialog extends StatelessWidget {
                     _buildSection('Product Details', Icons.inventory, [
                       _buildDetailRow(
                         'Sender Office',
-                        product.senderOfficeName,
+                        widget.product.senderOfficeName,
                       ),
-                      _buildDetailRow('Subject/Description', product.subject),
+                      _buildDetailRow(
+                        'Subject/Description',
+                        widget.product.subject,
+                      ),
                     ]),
 
                     const SizedBox(height: 20),
@@ -147,36 +179,39 @@ class ProductDetailsDialog extends StatelessWidget {
                     _buildSection('Routing Information', Icons.route, [
                       _buildDetailRow(
                         'Target Department',
-                        product.targetDepartmentName,
+                        widget.product.targetDepartmentName,
                       ),
                       _buildDetailRow(
                         'Target Person',
-                        product.targetPersonName,
+                        widget.product.targetPersonName,
                       ),
-                      if (product.currentDepartmentName != null)
+                      if (widget.product.currentDepartmentName != null)
                         _buildDetailRow(
                           'Current Department',
-                          product.currentDepartmentName!,
+                          widget.product.currentDepartmentName!,
                         ),
-                      if (product.currentPersonName != null)
+                      if (widget.product.currentPersonName != null)
                         _buildDetailRow(
                           'Current Person',
-                          product.currentPersonName!,
+                          widget.product.currentPersonName!,
                         ),
                     ]),
 
                     const SizedBox(height: 20),
 
                     // Delivery Person (if available)
-                    if (product.deliveryPersonName != null ||
-                        product.deliveryPersonContact != null) ...[
+                    if (widget.product.deliveryPersonName != null ||
+                        widget.product.deliveryPersonContact != null) ...[
                       _buildSection('Delivery Person', Icons.person, [
-                        if (product.deliveryPersonName != null)
-                          _buildDetailRow('Name', product.deliveryPersonName!),
-                        if (product.deliveryPersonContact != null)
+                        if (widget.product.deliveryPersonName != null)
+                          _buildDetailRow(
+                            'Name',
+                            widget.product.deliveryPersonName!,
+                          ),
+                        if (widget.product.deliveryPersonContact != null)
                           _buildDetailRow(
                             'Contact',
-                            product.deliveryPersonContact!,
+                            widget.product.deliveryPersonContact!,
                           ),
                       ]),
                       const SizedBox(height: 20),
@@ -259,10 +294,10 @@ class ProductDetailsDialog extends StatelessWidget {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: product.statusHistory.length,
+      itemCount: widget.product.statusHistory.length,
       itemBuilder: (context, index) {
-        final history = product.statusHistory[index];
-        final isLast = index == product.statusHistory.length - 1;
+        final history = widget.product.statusHistory[index];
+        final isLast = index == widget.product.statusHistory.length - 1;
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +414,7 @@ class ProductDetailsDialog extends StatelessWidget {
   }
 
   Color _getStatusColor() {
-    switch (product.currentStatus) {
+    switch (widget.product.currentStatus) {
       case 'submitted':
         return AppTheme.warning;
       case 'received_by_reception':
@@ -394,7 +429,7 @@ class ProductDetailsDialog extends StatelessWidget {
   }
 
   String _getStatusLabel() {
-    switch (product.currentStatus) {
+    switch (widget.product.currentStatus) {
       case 'submitted':
         return 'Awaiting Reception';
       case 'received_by_reception':
@@ -404,7 +439,7 @@ class ProductDetailsDialog extends StatelessWidget {
       case 'completed':
         return 'Completed';
       default:
-        return product.currentStatus;
+        return widget.product.currentStatus;
     }
   }
 

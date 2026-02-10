@@ -8,6 +8,7 @@ import 'package:pass_point/features/staff/screens/staff_product_dashboard.dart';
 import '../../../core/services/staff_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
+import '../../../data/repositories/product_repository.dart';
 import '../../admin/widgets/stat_card.dart';
 import '../../admin/widgets/visitor_log_tile.dart';
 import '../../export/utils/file_writer.dart';
@@ -503,9 +504,54 @@ class _StaffDashboardScreenState extends State<StaffDashboardScreen>
                                         );
                                       }
                                     },
-                                    icon: const Icon(
-                                      Icons.inventory_2,
-                                      size: 18,
+                                    icon: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        const Icon(Icons.inventory_2, size: 18),
+                                        // PHASE 3: Badge on My Products button
+                                        StreamBuilder<int>(
+                                          stream: ProductRepository()
+                                              .getUnreadCountForStaff(
+                                                FirebaseAuth
+                                                        .instance
+                                                        .currentUser
+                                                        ?.uid ??
+                                                    '',
+                                              ),
+                                          builder: (context, snapshot) {
+                                            final count = snapshot.data ?? 0;
+                                            if (count == 0)
+                                              return const SizedBox.shrink();
+                                            return Positioned(
+                                              right: -8,
+                                              top: -8,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: AppTheme.primaryRed,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      minWidth: 16,
+                                                      minHeight: 16,
+                                                    ),
+                                                child: Text(
+                                                  '$count',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
                                     label: const Text('My Products'),
                                     style: OutlinedButton.styleFrom(
