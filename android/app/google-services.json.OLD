@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "53373422648",
-    "project_id": "pass-point-nepal",
-    "storage_bucket": "pass-point-nepal.firebasestorage.app"
+    "project_number": "714063925635",
+    "project_id": "pass-point-9d316",
+    "storage_bucket": "pass-point-9d316.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53373422648:android:380d3f12741f2a32306acd",
+        "mobilesdk_app_id": "1:714063925635:android:7f4652def4c890d21be6b6",
         "android_client_info": {
           "package_name": "com.nexora_ai.pass_point"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBbAAKycWZG1edLW9tuPkORZ2mlbMgDdhw"
+          "current_key": "AIzaSyDFJszCFzTM3sLEUDT2TD4Wg0p1pRyeq6Y"
         }
       ],
       "services": {

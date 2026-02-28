@@ -16,14 +16,16 @@ import '../widgets/stat_card.dart';
 import '../widgets/visitor_log_tile.dart';
 import 'department_management_screen.dart';
 
-class AdminDashboardScreen extends StatefulWidget {
-  const AdminDashboardScreen({Key? key}) : super(key: key);
+class ReceptionistDashboardScreen extends StatefulWidget {
+  const ReceptionistDashboardScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  State<ReceptionistDashboardScreen> createState() =>
+      _ReceptionistDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+class _ReceptionistDashboardScreenState
+    extends State<ReceptionistDashboardScreen>
     with SingleTickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   String _query = '';

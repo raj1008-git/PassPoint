@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pass_point/core/utils/dev.log.dart';
-import 'package:pass_point/data/models/visitor.dart';
+import 'package:pass_point/data/models/visitor_model.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/services/cloudinary_service.dart';

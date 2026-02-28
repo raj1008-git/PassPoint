@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/utils/dev.log.dart';
-import 'features/admin/screens/admin_dashboard_screen.dart'; // Your existing
+import 'features/admin/screens/receptionist_dashboard_screen.dart'; // Your existing
 import 'features/admin/screens/receptionist_login_screen.dart';
 import 'features/splash/screens/role_selection_screen.dart';
 import 'features/splash/screens/splash_screen.dart';
@@ -51,7 +51,7 @@ class PassPointApp extends StatelessWidget {
         '/receptionist-login': (context) => const ReceptionistLoginScreen(),
         '/staff-auth': (context) => const StaffAuthScreen(),
         '/home': (context) => const VisitorWelcomeScreen(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
+        '/admin-dashboard': (context) => const ReceptionistDashboardScreen(),
         '/staff-dashboard': (context) => const StaffDashboardScreen(),
       },
     );

@@ -5,11 +5,11 @@ import '../../../core/services/pin_service.dart';
 import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
-import '../../admin/screens/admin_dashboard_screen.dart';
+import '../../admin/screens/receptionist_dashboard_screen.dart';
 import '../../admin/widgets/pin_dialog.dart';
 import '../../product/screens/product_checkin_screen.dart';
 import '../widgets/carousel_section.dart';
-import 'checkin_screen.dart';
+import 'visitor_check-in_screen.dart';
 
 class VisitorWelcomeScreen extends StatefulWidget {
   const VisitorWelcomeScreen({Key? key}) : super(key: key);
@@ -90,9 +90,9 @@ class _VisitorWelcomeScreenState extends State<VisitorWelcomeScreen> {
     }
 
     if (isLoggedIn) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ReceptionistDashboardScreen()),
+      );
     } else {
       Navigator.of(context).pushNamed('/admin-login');
     }
