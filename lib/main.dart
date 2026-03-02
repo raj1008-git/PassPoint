@@ -2,8 +2,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'core/di/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/dev.log.dart';
+import 'data/local/isar_service.dart';
 import 'features/admin/screens/admin_dashboard_screen.dart'; // Your existing
 import 'features/admin/screens/receptionist_login_screen.dart';
 import 'features/splash/screens/role_selection_screen.dart';
@@ -22,6 +24,9 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   devLog('Firebase Initialized');
+
+  await IsarService.init();
+  ServiceLocator.staffSync.syncIfNeeded();
 
   runApp(const PassPointApp());
 }

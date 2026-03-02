@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"pass-point-9d316","appId":"1:714063925635:android:7f4652def4c890d21be6b6","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"pass-point-9d316","configurations":{"android":"1:714063925635:android:7f4652def4c890d21be6b6","ios":"1:714063925635:ios:43bce6fdcfe982ae1be6b6"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "pass-point-9d316",
+          "appId": "1:714063925635:android:7f4652def4c890d21be6b6",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "pass-point-9d316",
+          "configurations": {
+            "android": "1:714063925635:android:7f4652def4c890d21be6b6",
+            "ios": "1:714063925635:ios:43bce6fdcfe982ae1be6b6"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ]
+}

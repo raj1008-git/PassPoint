@@ -8,6 +8,7 @@ import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dev.log.dart';
 import '../../../data/repositories/product_repository.dart';
+import '../../../test_widget.dart';
 import '../../export/utils/file_writer.dart';
 import '../../product/bloc/product_bloc.dart';
 import '../../product/bloc/product_event.dart';
@@ -311,6 +312,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
+                                              // Temporary — remove after Phase 1 test
                                               const Text(
                                                 'Export Visitor Log',
                                                 style: AppTheme.h3,
@@ -384,6 +386,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     ),
                                   ),
                                 ),
+                                const Phase1TestWidget(),
                                 OutlinedButton.icon(
                                   onPressed: () {
                                     Navigator.push(
