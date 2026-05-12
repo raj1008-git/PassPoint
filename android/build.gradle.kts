@@ -23,3 +23,18 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// ---------------------------------------------------------------------------
+// Fix for isar_flutter_libs 3.1.0+1 — missing namespace with AGP 8+
+// Uses pluginManager.withPlugin so it hooks before evaluation, avoiding
+// the "project already evaluated" error from afterEvaluate.
+// ---------------------------------------------------------------------------
+subprojects {
+    pluginManager.withPlugin("com.android.library") {
+        extensions.findByType<com.android.build.gradle.LibraryExtension>()?.apply {
+            if (namespace == null) {
+                namespace = group.toString()
+            }
+        }
+    }
+}

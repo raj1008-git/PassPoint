@@ -1,7 +1,18 @@
+// lib/features/splash/screens/splash_screen.dart
+//
+// CHANGES FROM ORIGINAL (additive only):
+//   + EventManagerAuthService import
+//   + event_manager session check block inside _checkAuthAndNavigate(),
+//     inserted AFTER the existing staff check, BEFORE the fallback
+//
+// ZERO changes to animation setup, layout, or existing auth checks.
+
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/services/event_manager_auth_service.dart'; // NEW
 import '../../../core/services/receptionist_auth_service.dart';
 import '../../../core/services/staff_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -53,17 +64,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // Check if receptionist is logged in
+    // ── Existing check 1: receptionist ───────────────────────────────────────
     final isReceptionistLoggedIn = await ReceptionistAuthService.isLoggedIn();
     if (isReceptionistLoggedIn) {
       devLog('Receptionist logged in, navigating to Welcome Screen');
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
-      }
+      if (mounted) Navigator.of(context).pushReplacementNamed('/home');
       return;
     }
 
-    // Check if staff is logged in
+    // ── Existing check 2: staff ───────────────────────────────────────────────
     final isStaffLoggedIn = await StaffAuthService.isLoggedIn();
     if (isStaffLoggedIn) {
       devLog('Staff logged in, navigating to Staff Dashboard');
@@ -73,7 +82,28 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // No one logged in, navigate to role selection
+    // ── NEW check 3: event manager ────────────────────────────────────────────
+    final isEventManagerLoggedIn =
+    await EventManagerAuthService.isLoggedIn();
+    if (isEventManagerLoggedIn) {
+      devLog('Event Manager logged in, navigating to Event Dashboard');
+      if (mounted) {
+        // Navigator.of(context).pushReplacementNamed('/event-dashboard');
+        // BEFORE:
+        Navigator.of(context).pushReplacementNamed('/event-dashboard');
+
+// AFTER:
+        if (kIsWeb) {
+          Navigator.of(context).pushReplacementNamed('/event-web');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/event-dashboard');
+        }
+      }
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Existing fallback: role selection ────────────────────────────────────
     devLog('No user logged in, navigating to Role Selection Screen');
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/role-selection');
@@ -85,6 +115,8 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.dispose();
     super.dispose();
   }
+
+  // ── Build methods below are IDENTICAL to original — zero changes ──────────
 
   @override
   Widget build(BuildContext context) {
@@ -125,8 +157,6 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(height: constraints.maxHeight * 0.1),
-
-              // Animated Logo
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: ScaleTransition(
@@ -153,10 +183,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // App Name
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(
@@ -182,19 +209,14 @@ class _SplashScreenState extends State<SplashScreen>
                   ],
                 ),
               ),
-
               SizedBox(height: constraints.maxHeight * 0.15),
-
-              // Loading Indicator
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: _buildLoadingIndicator(),
               ),
-
               SizedBox(height: constraints.maxHeight * 0.1),
-
-              // Powered by
-              FadeTransition(opacity: _fadeAnimation, child: _buildPoweredBy()),
+              FadeTransition(
+                  opacity: _fadeAnimation, child: _buildPoweredBy()),
             ],
           ),
         ),
@@ -202,7 +224,8 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildLandscapeLayout(BoxConstraints constraints, bool isSmallHeight) {
+  Widget _buildLandscapeLayout(
+      BoxConstraints constraints, bool isSmallHeight) {
     return SingleChildScrollView(
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -213,12 +236,10 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           child: Row(
             children: [
-              // LEFT: Logo and Name
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Animated Logo
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: ScaleTransition(
@@ -247,10 +268,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-
                     SizedBox(height: isSmallHeight ? 16 : 24),
-
-                    // App Name
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: Column(
@@ -279,8 +297,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ],
                 ),
               ),
-
-              // Divider
               Container(
                 width: 1,
                 height: isSmallHeight ? 120 : 160,
@@ -297,21 +313,15 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ),
-
-              // RIGHT: Loading and Powered By
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Loading Indicator
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: _buildLoadingIndicator(compact: isSmallHeight),
                     ),
-
                     SizedBox(height: isSmallHeight ? 24 : 32),
-
-                    // Powered by
                     FadeTransition(
                       opacity: _fadeAnimation,
                       child: _buildPoweredBy(compact: isSmallHeight),
@@ -329,7 +339,6 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildLoadingIndicator({bool compact = false}) {
     return Column(
       children: [
-        // Three Dots Loading Animation
         SizedBox(
           width: compact ? 60 : 80,
           height: compact ? 20 : 24,
@@ -364,9 +373,7 @@ class _SplashScreenState extends State<SplashScreen>
                   );
                 },
                 onEnd: () {
-                  if (mounted) {
-                    setState(() {});
-                  }
+                  if (mounted) setState(() {});
                 },
               );
             }),

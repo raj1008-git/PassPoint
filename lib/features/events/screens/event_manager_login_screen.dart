@@ -1,5 +1,6 @@
 // lib/features/events/screens/event_manager_login_screen.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/services/event_manager_auth_service.dart';
@@ -47,7 +48,16 @@ class _EventManagerLoginScreenState extends State<EventManagerLoginScreen> {
       devLog('EventManagerLoginScreen: login success');
 
       if (mounted) {
+        // Navigator.of(context).pushReplacementNamed('/event-dashboard');
+        // BEFORE (Batch 4):
         Navigator.of(context).pushReplacementNamed('/event-dashboard');
+
+// AFTER:
+        if (kIsWeb) {
+          Navigator.of(context).pushReplacementNamed('/event-web');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/event-dashboard');
+        }
       }
     } catch (e) {
       devLog(

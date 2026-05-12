@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "pass-point-9d316"
-  }
+    "default": "pass-point-9d316",
+    "prod": "pass-point-9d316"
+  },
+  "targets": {},
+  "etags": {}
 }

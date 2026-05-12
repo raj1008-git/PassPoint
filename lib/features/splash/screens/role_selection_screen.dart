@@ -1,3 +1,12 @@
+// lib/features/splash/screens/role_selection_screen.dart
+//
+// CHANGES FROM ORIGINAL (additive only):
+//   + _handleEventManagerAccess() method
+//   + 4th role card "Event Manager" in both portrait column and landscape row
+//   + import for EventManagerLoginScreen route (via named route only — no direct import needed)
+//
+// ZERO changes to existing Receptionist / HQ Staff / Branch Staff logic.
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -21,6 +30,13 @@ class RoleSelectionScreen extends StatelessWidget {
     Navigator.of(context).pushNamed('/staff-auth', arguments: {'isHQ': false});
   }
 
+  // ── NEW ───────────────────────────────────────────────────────────────────
+  void _handleEventManagerAccess(BuildContext context) {
+    devLog('Event Manager button pressed');
+    Navigator.of(context).pushNamed('/event-manager-login');
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,12 +59,12 @@ class RoleSelectionScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Branding
+                      // Branding — unchanged
                       _buildBranding(isTablet),
 
                       SizedBox(height: isTablet ? 48 : 40),
 
-                      // Title
+                      // Title — unchanged
                       Text(
                         'Who are you?',
                         style: TextStyle(
@@ -72,7 +88,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
                       SizedBox(height: isTablet ? 56 : 48),
 
-                      // PHASE 3: 3 Role Cards
+                      // ── Role cards ─────────────────────────────────────
                       if (isLandscape && isTablet)
                         Row(
                           children: [
@@ -90,11 +106,12 @@ class RoleSelectionScreen extends StatelessWidget {
                                     AppTheme.primaryRedDark,
                                   ],
                                 ),
-                                onTap: () => _handleReceptionistAccess(context),
+                                onTap: () =>
+                                    _handleReceptionistAccess(context),
                                 isTablet: true,
                               ),
                             ),
-                            const SizedBox(width: 24),
+                            const SizedBox(width: 20),
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
@@ -113,7 +130,7 @@ class RoleSelectionScreen extends StatelessWidget {
                                 isTablet: true,
                               ),
                             ),
-                            const SizedBox(width: 24),
+                            const SizedBox(width: 20),
                             Expanded(
                               child: _buildRoleCard(
                                 context: context,
@@ -128,10 +145,33 @@ class RoleSelectionScreen extends StatelessWidget {
                                     AppTheme.success.withOpacity(0.8),
                                   ],
                                 ),
-                                onTap: () => _handleBranchStaffAccess(context),
+                                onTap: () =>
+                                    _handleBranchStaffAccess(context),
                                 isTablet: true,
                               ),
                             ),
+                            const SizedBox(width: 20),
+                            // ── NEW card ──────────────────────────────────
+                            Expanded(
+                              child: _buildRoleCard(
+                                context: context,
+                                title: 'Event Manager',
+                                subtitle: 'Events & attendance',
+                                icon: Icons.event_rounded,
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF7B1FA2),
+                                    Color(0xFFAB47BC),
+                                  ],
+                                ),
+                                onTap: () =>
+                                    _handleEventManagerAccess(context),
+                                isTablet: true,
+                              ),
+                            ),
+                            // ─────────────────────────────────────────────
                           ],
                         )
                       else
@@ -188,12 +228,32 @@ class RoleSelectionScreen extends StatelessWidget {
                               onTap: () => _handleBranchStaffAccess(context),
                               isTablet: isTablet,
                             ),
+                            SizedBox(height: isTablet ? 24 : 20),
+                            // ── NEW card ───────────────────────────────────
+                            _buildRoleCard(
+                              context: context,
+                              title: 'Event Manager',
+                              subtitle: 'Events & attendance',
+                              icon: Icons.event_rounded,
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF7B1FA2),
+                                  Color(0xFFAB47BC),
+                                ],
+                              ),
+                              onTap: () =>
+                                  _handleEventManagerAccess(context),
+                              isTablet: isTablet,
+                            ),
+                            // ──────────────────────────────────────────────
                           ],
                         ),
 
                       SizedBox(height: isTablet ? 48 : 40),
 
-                      // Footer
+                      // Footer — unchanged
                       Text(
                         '© 2025 PassPoint. All rights reserved.',
                         style: AppTheme.bodySmall.copyWith(
@@ -211,6 +271,8 @@ class RoleSelectionScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ── All methods below are UNCHANGED from original ─────────────────────────
 
   Widget _buildBranding(bool isTablet) {
     return Column(
@@ -328,7 +390,6 @@ class RoleSelectionScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Icon with gradient background
             Container(
               width: isTablet ? 96 : 80,
               height: isTablet ? 96 : 80,
@@ -349,10 +410,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 size: isTablet ? 48 : 40,
               ),
             ),
-
             SizedBox(height: isTablet ? 24 : 20),
-
-            // Title
             Text(
               title,
               style: TextStyle(
@@ -362,10 +420,7 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-
             SizedBox(height: isTablet ? 12 : 8),
-
-            // Subtitle
             Text(
               subtitle,
               style: TextStyle(
@@ -374,10 +429,7 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-
             SizedBox(height: isTablet ? 24 : 20),
-
-            // Tap indicator
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: isTablet ? 20 : 16,
