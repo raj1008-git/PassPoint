@@ -587,6 +587,9 @@ class _WebDashboardTab extends StatelessWidget {
         final active = events.where((e) => e.isActive).length;
         final completed = events.where((e) => e.isCompleted).length;
 
+
+
+        // Added the new functionality
         return CustomScrollView(
           slivers: [
             // Page header
